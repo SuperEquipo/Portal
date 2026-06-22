@@ -3,33 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Súper Equipo</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#10b981">
+    <title>Portal - Súper Equipo</title>
+    
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f3f4f6; }
-        iframe { width: 100%; height: 100%; border: none; display: block; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #f3f4f6;
+        }
+        iframe {
+            border: none; width: 100%; height: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <iframe id="pantalla-app" allow="camera; microphone; fullscreen; geolocation"></iframe>
+    <iframe id="portal-frame" src=""></iframe>
 
     <script>
-        // Captura los parámetros como el ?id=CLIENTE de la URL de GitHub
-        const parametrosWeb = window.location.search; 
-        
-        // Tu URL de Google Script
+        // PEGA AQUÍ TU URL DEFINITIVA DE GOOGLE APPS SCRIPT (La que termina en /exec)
         const urlGoogleScript = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
         
-        // Se lo reenvía al iframe de Google de forma transparente
-        document.getElementById("pantalla-app").src = urlGoogleScript + parametrosWeb;
-
-        // Activa el modo App
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
+        // Esto captura el ID exacto del cliente sin que el móvil lo borre
+        const params = window.location.search;
+        
+        // Inyecta el enlace completo en el marco
+        document.getElementById("portal-frame").src = urlGoogleScript + params;
     </script>
 </body>
 </html>
