@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Súper Equipo</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#10b981">
+    
+    <!-- 🌟 RECUPERADO: Etiquetas vitales para que sea App Autónoma y tenga Icono en iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <meta name="theme-color" content="#1e293b">
+
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f3f4f6; }
         iframe { width: 100%; height: 100%; border: none; display: block; position: absolute; top: 0; left: 0; z-index: 10; opacity: 0; transition: opacity 0.5s ease; }
@@ -28,7 +35,7 @@
 </head>
 <body>
 
-    <!-- Pantalla de carga bonita -->
+    <!-- Pantalla de carga -->
     <div id="splash">
         <div class="spinner"></div>
         <h2 style="margin:0; font-size:18px;">Cargando tu perfil...</h2>
@@ -45,11 +52,20 @@
 
         iframe.src = urlGoogleScript + parametrosWeb;
 
-        // Cuando Google Script termina de cargar, ocultamos la pantalla de carga y mostramos la app suavemente
+        // Oculta la pantalla de carga cuando Google está listo
         iframe.onload = function() {
             splash.style.display = "none";
             iframe.style.opacity = "1";
         };
+
+        // 🌟 NUEVO: Escucha el mensaje de Google para recargar de forma segura (sin pantalla blanca)
+        window.addEventListener('message', function(event) {
+            if (event.data === 'recargarApp') {
+                splash.style.display = "flex"; // Volvemos a poner la pantalla de carga
+                iframe.style.opacity = "0";
+                window.location.reload(); // Github se recarga a sí mismo
+            }
+        });
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
