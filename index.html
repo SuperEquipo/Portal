@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
     
-    <!-- 🌟 ETIQUETAS EXHAUSTIVAS PARA APPLE (iOS) PARA QUE NO FALLE EL ICONO -->
+    <!-- 🌟 ETIQUETAS EXHAUSTIVAS PARA APPLE (iOS) PARA MODO APP -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,7 +22,7 @@
     <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png">
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f3f4f6; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8fafc; }
         iframe { width: 100%; height: 100%; border: none; display: block; position: absolute; top: 0; left: 0; z-index: 10; opacity: 0; transition: opacity 0.5s ease; }
         
         /* Estilos de la pantalla de carga (Splash Screen) */
@@ -34,7 +34,7 @@
         }
         .spinner {
             width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid #10b981; border-radius: 50%;
+            border-top: 4px solid #3b82f6; border-radius: 50%;
             animation: spin 1s linear infinite; margin-bottom: 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -45,7 +45,7 @@
     <!-- Pantalla de carga -->
     <div id="splash">
         <div class="spinner"></div>
-        <h2 style="margin:0; font-size:18px;">Cargando tu perfil...</h2>
+        <h2 style="margin:0; font-size:16px; font-weight:600;">Cargando tu perfil...</h2>
     </div>
 
     <iframe id="pantalla-app" allow="camera; microphone; fullscreen; geolocation"></iframe>
@@ -54,35 +54,31 @@
         const parametrosWeb = window.location.search; 
         const urlGoogleScript = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
         
-        // 🌟 DETECTOR INTELIGENTE DE APPLE (iOS)
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const iframe = document.getElementById("pantalla-app");
+        const splash = document.getElementById("splash");
 
-        if (isIOS) {
-            // Si es un iPhone, lo sacamos del iframe para evitar el bloqueo de Google y Apple
-            window.location.replace(urlGoogleScript + parametrosWeb);
-        } else {
-            // Si es Android o PC, usamos tu código original impecable
-            const iframe = document.getElementById("pantalla-app");
-            const splash = document.getElementById("splash");
+        // Cargamos el iframe de Google
+        iframe.src = urlGoogleScript + parametrosWeb;
 
-            iframe.src = urlGoogleScript + parametrosWeb;
+        // Oculta la pantalla de carga suavemente
+        iframe.onload = function() {
+            splash.style.opacity = "0";
+            setTimeout(() => splash.style.display = "none", 500);
+            iframe.style.opacity = "1";
+        };
 
-            iframe.onload = function() {
-                splash.style.display = "none";
-                iframe.style.opacity = "1";
-            };
-
-            window.addEventListener('message', function(event) {
-                if (event.data === 'recargarApp') {
-                    splash.style.display = "flex"; 
-                    iframe.style.opacity = "0";
-                    window.location.reload(); 
-                }
-            });
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js');
+        // Escucha la orden de recarga para la subida de fotos
+        window.addEventListener('message', function(event) {
+            if (event.data === 'recargarApp') {
+                splash.style.display = "flex"; 
+                splash.style.opacity = "1";
+                iframe.style.opacity = "0";
+                window.location.reload(); 
             }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>
