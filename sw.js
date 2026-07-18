@@ -1,7 +1,7 @@
 self.addEventListener('install', (e) => {
-  console.log('[Service Worker] Instalado');
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', (e) => {
-  // Deja pasar todas las peticiones (No cacheamos para evitar conflictos con Google Script)
+  // Service Worker pasivo para aprobar el requisito de Android sin causar fallos.
 });
