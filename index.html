@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
     
-    <!-- 🌟 ETIQUETAS EXHAUSTIVAS PARA APPLE (iOS) PARA QUE NO FALLE EL ICONO -->
+    <!-- 🌟 ETIQUETAS EXHAUSTIVAS PARA APPLE (iOS) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -57,7 +57,12 @@
         const iframe = document.getElementById("pantalla-app");
         const splash = document.getElementById("splash");
 
-        iframe.src = urlGoogleScript + parametrosWeb;
+        // 🌟 LA SOLUCIÓN: FORZAR CONEXIÓN LIMPIA (CACHE-BUSTING)
+        // Añadimos una marca de tiempo única para que Android Chrome no pueda usar
+        // la sesión de cuentas bugeada que tiene guardada en memoria.
+        const timestamp = new Date().getTime();
+        const separador = parametrosWeb ? "&" : "?";
+        iframe.src = urlGoogleScript + parametrosWeb + separador + "nocache=" + timestamp;
 
         // Oculta la pantalla de carga cuando Google está listo
         iframe.onload = function() {
@@ -65,10 +70,10 @@
             iframe.style.opacity = "1";
         };
 
-        // Escucha el mensaje de Google para recargar de forma segura (sin pantalla blanca)
+        // Escucha el mensaje de Google para recargar de forma segura
         window.addEventListener('message', function(event) {
             if (event.data === 'recargarApp') {
-                splash.style.display = "flex"; 
+                splash.style.display = "flex";
                 iframe.style.opacity = "0";
                 window.location.reload(); 
             }
