@@ -89,37 +89,3 @@ navigator.serviceWorker.register('sw.js');
 </script>
 </body>
 </html>
-
-manifest.json
-{
-"name": "Súper Equipo",
-"short_name": "Súper Equipo",
-"start_url": "./index.html",
-"display": "standalone",
-"background_color": "#0f172a",
-"theme_color": "#0f172a",
-"orientation": "portrait",
-"icons": [
-{
-"src": "icon-192.png",
-"sizes": "192x192",
-"type": "image/png",
-"purpose": "any maskable"
-},
-{
-"src": "icon-512.png",
-"sizes": "512x512",
-"type": "image/png",
-"purpose": "any maskable"
-}
-]
-}
-
-sw.js
-self.addEventListener('install', (e) => {
-self.skipWaiting();
-});
-
-self.addEventListener('fetch', (e) => {
-// Service Worker pasivo para aprobar el requisito de Android sin causar fallos.
-}); 
