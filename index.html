@@ -935,6 +935,16 @@
      subirArchivoSecuencial(0);
    }
 
+  async function apiPost(action, data = {}) {
+     const payload = { action: action, carpetaId: carpetaId, data: data };
+     const res = await fetch(APPS_SCRIPT_URL, {
+       method: "POST",
+       headers: { "Content-Type": "text/plain;charset=utf-8" },
+       body: JSON.stringify(payload)
+     });
+     return await res.json();
+   }
+
    function subirArchivoSecuencial(indice) {
      if (indice >= filesArray.length) {
        ejecutarAnalisisDeMetricasInmediato();
@@ -946,10 +956,17 @@
 
      lector.onloadend = async function() {
        try {
-         const res = await apiCall("subirImagenDesdeApp", { base64Data: lector.result, nombreArchivo: archivo.name });
-         if (res.exito) subirArchivoSecuencial(indice + 1);
-         else { restablecerBotonCarga(); mostrarAlertaCustom("Fallo al subir " + archivo.name); }
-       } catch(e) { restablecerBotonCarga(); mostrarAlertaCustom("Error al subir archivo."); }
+         const res = await apiPost("subirImagenDesdeApp", { base64Data: lector.result, nombreArchivo: archivo.name });
+         if (res && res.exito) {
+           subirArchivoSecuencial(indice + 1);
+         } else {
+           restablecerBotonCarga();
+           mostrarAlertaCustom("Fallo al subir " + archivo.name + ": " + (res ? res.error : "Error desconocido"));
+         }
+       } catch(e) {
+         restablecerBotonCarga();
+         mostrarAlertaCustom("Error de red al subir archivo.");
+       }
      };
      lector.readAsDataURL(archivo);
    }
@@ -957,14 +974,17 @@
    async function ejecutarAnalisisDeMetricasInmediato() {
      document.getElementById('texto-estado-carga').innerText = "Analizando tu evolución con IA (1-2 min)...";
      try {
-       const res = await apiCall("procesarSeguimientoInmediato");
+       const res = await apiPost("procesarSeguimientoInmediato", {});
        if (res && res.exito) {
          mostrarAlertaCustom("¡Análisis completado!");
          setTimeout(() => window.location.reload(), 2000);
+       } else {
+         restablecerBotonCarga();
+         mostrarAlertaCustom("El análisis no pudo completarse. Revisa las imágenes.");
        }
      } catch(e) {
        restablecerBotonCarga();
-       mostrarAlertaCustom("Error en el análisis.");
+       mostrarAlertaCustom("Error de conexión durante el análisis.");
      }
    }
 
