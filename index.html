@@ -186,7 +186,7 @@
          <div style="font-size: 40px; margin-bottom: 8px;">📩</div>
          <div style="font-weight: 800; font-size: 16px; text-transform: uppercase;">Tu Plan de Acción</div>
        </div>
-       <a id="enlace-presentacion" href="#" target="_blank" class="btn-primary">Abrir presentación</a>
+       <button onclick="abrirPresentacionModal()" class="btn-primary">Abrir presentación</button>
      </div>
 
      <div id="caja-video" class="card hidden">
@@ -320,6 +320,15 @@
    </div>
  </div>
 
+ <!-- VISOR MODAL DE PRESENTACIÓN A PANTALLA COMPLETA (FUERA DE SCRIPT) -->
+ <div id="modal-presentacion" style="position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: none; flex-direction: column;">
+   <div style="background: #0f172a; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; color: white;">
+     <span style="font-weight: 700; font-size: 14px;">Tu Plan de Acción</span>
+     <button onclick="cerrarPresentacionModal()" style="background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; cursor: pointer; font-size: 13px;">Cerrar ✖</button>
+   </div>
+   <iframe id="iframe-presentacion-modal" style="width: 100%; flex: 1; border: none; background: white;"></iframe>
+ </div>
+
  <script>
    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
    let carpetaId = "";
@@ -368,7 +377,8 @@
      const urlParams = new URLSearchParams(window.location.search);
      let idFromUrl = urlParams.get('id');
 
-     if (idFromUrl) {
+     // 🛡️ PROTECCIÓN DE MEMORIA: Solo guardar si es un ID de carpeta válido
+     if (idFromUrl && !idFromUrl.includes("presentacion")) {
        localStorage.setItem('superequipo_id_cliente', idFromUrl);
        carpetaId = idFromUrl;
      } else {
@@ -377,11 +387,10 @@
 
      if (!carpetaId) {
        document.getElementById('splash-loader').style.display = 'none';
-       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'>Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.</p>";
+       mostrarErrorCarga("Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.");
        return;
      }
 
-     // 🌟 REINTENTO SILENCIOSO AUTOMÁTICO EN SEGUNDO PLANO (Auto-Despertador de Google)
      let intentos = 0;
      let cargadoExito = false;
 
@@ -389,9 +398,15 @@
        try {
          intentos++;
          datosApp = await apiCall("obtenerDatos");
-         if (datosApp && datosApp.nombre) {
+         
+         // 🛡️ FILTRO DE SEGURIDAD: Verificar que los datos corresponden al perfil del cliente
+         if (datosApp && datosApp.nombre && datosApp.nombre !== "Presentación") {
            cargadoExito = true;
            inicializarInterfaz();
+         } else if (datosApp && datosApp.nombre === "Presentación") {
+           localStorage.removeItem('superequipo_id_cliente');
+           mostrarErrorCarga("Se detectó una sesión no válida. Abre tu enlace del correo.");
+           return;
          }
        } catch (err) {
          if (intentos < 3) await new Promise(r => setTimeout(r, 1200));
@@ -399,13 +414,30 @@
      }
 
      if (!cargadoExito) {
-       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Conexión lenta. Pulsa para reintentar</button></p>";
+       mostrarErrorCarga("Conexión lenta con el servidor. Pulsa para reintentar.");
      }
 
      const splash = document.getElementById('splash-loader');
      splash.style.opacity = '0';
      setTimeout(() => splash.style.display = 'none', 400);
    });
+
+   function mostrarErrorCarga(msg) {
+     const splash = document.getElementById('splash-loader');
+     if (splash) splash.style.display = 'none';
+     document.getElementById('contenido-informe').innerHTML = `
+       <div style="text-align:center; padding:20px; color:#dc2626;">
+         <p style="font-weight:600; font-size:14px; margin-bottom:16px;">${msg}</p>
+         <button onclick="restablecerPerfilLocal()" class="btn-primary" style="background:#dc2626;">
+           🔄 Restablecer y Cargar enlace del correo
+         </button>
+       </div>`;
+   }
+
+   function restablecerPerfilLocal() {
+     localStorage.removeItem('superequipo_id_cliente');
+     window.location.href = window.location.pathname;
+   }
 
    function inicializarInterfaz() {
      document.getElementById('nombre-usuario').innerText = "Hola, " + datosApp.nombre.split(" ")[0];
@@ -419,23 +451,24 @@
        document.getElementById('app-apple-icon').href = imgLogo.src;
      }
 
+     const tarjetaInforme = document.getElementById('tarjeta-informe');
+     if (tarjetaInforme) tarjetaInforme.classList.remove('hidden');
      document.getElementById('contenido-informe').innerHTML = formatearInformeHTML(datosApp.informe);
 
      const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1);
-     const tarjetaInforme = document.getElementById('tarjeta-informe');
 
-     if (datosApp.formUrl && !datosApp.respuestasEnviadas && !tienePlanGenerado) {
+     if (tienePlanGenerado) {
+       document.getElementById('caja-procesando').classList.add('hidden');
+       document.getElementById('caja-formulario').classList.add('hidden');
+     } else if (datosApp.formUrl && !datosApp.respuestasEnviadas) {
        document.getElementById('caja-formulario').classList.remove('hidden');
        document.getElementById('enlace-formulario').href = datosApp.formUrl;
-       if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
      } else if (datosApp.respuestasEnviadas && !tienePlanGenerado) {
        document.getElementById('caja-procesando').classList.remove('hidden');
-       if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
      }
 
      if (datosApp.presentacionUrl) {
        document.getElementById('caja-presentacion').classList.remove('hidden');
-       document.getElementById('enlace-presentacion').href = datosApp.presentacionUrl;
      }
 
      if (tienePlanGenerado) {
@@ -454,7 +487,21 @@
      renderizarDieta();
    }
 
-   // 🌟 RESTAURADO: FORMATEADOR COMPLETO CON TABLA DE MÉTRICAS EN 2 COLUMNAS
+   function abrirPresentacionModal() {
+     if (!datosApp.presentacionUrl) return;
+     const modal = document.getElementById('modal-presentacion');
+     const iframe = document.getElementById('iframe-presentacion-modal');
+     iframe.src = datosApp.presentacionUrl;
+     modal.style.display = 'flex';
+   }
+
+   function cerrarPresentacionModal() {
+     const modal = document.getElementById('modal-presentacion');
+     const iframe = document.getElementById('iframe-presentacion-modal');
+     iframe.src = '';
+     modal.style.display = 'none';
+   }
+
    function formatearInformeHTML(textoPlano) {
      if (!textoPlano) return "Buscando datos...";
      
@@ -644,7 +691,6 @@
      return htmlFinal;
    }
 
-   // 🌟 RESTAURADO: RENDERIZADOR COMPLETO DE RUTINA CON DÍAS Y MARCAS
    function renderizarRutina(tienePlanGenerado) {
      const contenedorRutina = document.getElementById('subtab-rutina');
      if (!tienePlanGenerado) {
@@ -763,7 +809,6 @@
      contenedorRutina.innerHTML = htmlRutina;
    }
 
-   // 🌟 RESTAURADO: RENDERIZADOR COMPLETO DE ALIMENTACIÓN
    function renderizarDieta() {
      const contenedorAlimentacion = document.getElementById('subtab-dieta');
      if (!datosApp.alimentacion || datosApp.alimentacion.length <= 1) {
@@ -1090,5 +1135,3 @@
  </script>
 </body>
 </html>
-
-
