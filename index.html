@@ -318,7 +318,8 @@
    let carpetaId = "";
    let datosApp = {};
 
- function apiCall(action, params = {}) {
+   // 🌟 CONSULTAS GET INMUNE A REDIRECCIONES CORS EN SAFARI / CHROME
+   function apiCall(action, params = {}) {
      return new Promise((resolve, reject) => {
        const callbackName = "cb_" + Math.round(1000000 * Math.random());
 
@@ -356,7 +357,6 @@
    }
 
    window.addEventListener('DOMContentLoaded', async function() {
-     // Persistencia de ID para que el cliente no lo pierda nunca
      const urlParams = new URLSearchParams(window.location.search);
      let idFromUrl = urlParams.get('id');
 
@@ -425,6 +425,197 @@
      renderizarDieta();
    }
 
+   // 🌟 RESTAURADO: FORMATEADOR COMPLETO CON TABLA DE MÉTRICAS EN 2 COLUMNAS
+   function formatearInformeHTML(textoPlano) {
+     if (!textoPlano) return "Buscando datos...";
+     
+     var textoUltimoInforme = textoPlano;
+     var textoHistorico = "";
+     var indiceEvolucion = textoPlano.lastIndexOf("INFORME DE EVOLUCIÓN");
+     var indiceDiagnostico = textoPlano.lastIndexOf("ESTUDIO BIOMÉTRICO");
+     var indiceEvaluacionInicial = textoPlano.lastIndexOf("EVALUACIÓN INICIAL");
+     var corteFinal = Math.max(indiceEvolucion, indiceDiagnostico, indiceEvaluacionInicial);
+    
+     if (corteFinal !== -1) {
+       var inicioReal = (corteFinal > 3) ? corteFinal - 3 : corteFinal;
+       textoUltimoInforme = textoPlano.substring(inicioReal).trim();
+       textoHistorico = textoPlano.substring(0, inicioReal).trim();
+     }
+    
+     var datosAnteriores = {};
+     var celdasAnt = [];
+     if (textoHistorico !== "") {
+        var tempHist = textoHistorico.replace(/Métrica/g, "##TABLA##").replace(/Valor Actual/g, "##TABLA##");
+        var partesHist = tempHist.split("##TABLA##");
+        var ultimaTablaStr = partesHist[partesHist.length - 1].trim();
+        var lineasH = ultimaTablaStr.split(/\r\n|\r|\n/);
+        for (var h = 0; h < lineasH.length; h++) {
+           var lH = lineasH[h].trim();
+           if (lH === "" || lH.includes("---") || lH.includes("INFORME") || lH.includes("ESTUDIO")) continue;
+           var nH = lH;
+           var vH = lineasH[h+1] ? lineasH[h+1].trim() : "-";
+           datosAnteriores[nH] = vH;
+           celdasAnt.push(nH, vH);
+           h++;
+        }
+     }
+    
+     function obtenerValorAnterior(nombreBuscado) {
+        var nomLimpio = nombreBuscado.toLowerCase().trim();
+        for (var clave in datosAnteriores) {
+          if (clave.toLowerCase().trim().includes(nomLimpio)) return datosAnteriores[clave];
+        }
+        return "-";
+     }
+
+     function formatearDiferencia(valActual, valAnterior) {
+        if (!valAnterior || valAnterior === "-" || valActual === "-") return valActual;
+        if (valActual.includes("/")) {
+          var actSplit = valActual.replace("cm", "").split("/");
+          var antSplit = valAnterior.replace("cm", "").split("/");
+          if (actSplit.length === 2 && antSplit.length === 2) {
+            var nActIzq = parseFloat(actSplit[0].trim().replace(/,/g, '.'));
+            var nAntIzq = parseFloat(antSplit[0].trim().replace(/,/g, '.'));
+            var diffIzq = nActIzq - nAntIzq;
+            var strIzq = actSplit[0].trim() + " <span style='color:var(--text-muted); font-size:11px; font-weight:500;'>(" + (Math.abs(diffIzq) < 0.05 ? "=" : (diffIzq > 0 ? "+" : "") + diffIzq.toFixed(1)) + ")</span>";
+            var nActDer = parseFloat(actSplit[1].trim().replace(/,/g, '.'));
+            var nAntDer = parseFloat(antSplit[1].trim().replace(/,/g, '.'));
+            var diffDer = nActDer - nAntDer;
+            var strDer = actSplit[1].trim() + " <span style='color:var(--text-muted); font-size:11px; font-weight:500;'>(" + (Math.abs(diffDer) < 0.05 ? "=" : (diffDer > 0 ? "+" : "") + diffDer.toFixed(1)) + ")</span>";
+            return strIzq + " / " + strDer + " cm";
+          }
+          return valActual;
+        }
+        var nAct = parseFloat(valActual.toString().replace(/,/g, '.'));
+        var nAnt = parseFloat(valAnterior.toString().replace(/,/g, '.'));
+        if (isNaN(nAct) || isNaN(nAnt)) return valActual;
+        var diff = nAct - nAnt;
+        if (Math.abs(diff) < 0.05) return valActual + " <br><span style='color:var(--text-muted); font-size:12px; font-weight:500;'>(=)</span>";
+        var signo = diff > 0 ? "+" : "";
+        return valActual + " <br><span style='color:var(--accent); font-size:12.5px; font-weight:700;'>(" + signo + diff.toFixed(1) + ")</span>";
+     }
+
+     var textoLimpio = textoUltimoInforme.replace(/\*\*(.*?)\*\*/g, "<strong style='color:var(--primary);'>$1</strong>");
+     textoLimpio = textoLimpio.replace(/\*(.*?)\*/g, "<strong style='color:var(--primary);'>$1</strong>");
+    
+     var lineas = textoLimpio.split(/\r\n|\r|\n/);
+     var htmlFinal = "";
+     var enTabla = false;
+     var datosBascula = {};
+     var celdas = [];
+     var dentroDeCajaTitulo = false;
+    
+     for (var i = 0; i < lineas.length; i++) {
+       var linea = lineas[i].trim();
+      
+       if (dentroDeCajaTitulo && linea !== "" && !linea.includes("Análisis de punto de partida:") && !linea.includes("Análisis comparativo:")) {
+         htmlFinal += "</div>";
+         dentroDeCajaTitulo = false;
+       }
+
+       if (linea === "") {
+          if (!enTabla && htmlFinal !== "") htmlFinal += "<div style='height: 8px;'></div>";
+          continue;
+       }
+      
+       if (linea === "Métrica" || linea === "Valor Actual") { enTabla = true; continue; }
+      
+       if (enTabla) {
+         var nombreMetrica = linea;
+         var valorMetrica = lineas[i+1] ? lineas[i+1].trim() : "-";
+         datosBascula[nombreMetrica] = valorMetrica;
+         celdas.push(nombreMetrica, valorMetrica);
+         i++;
+       } else {
+         if (linea.includes("Evaluación del Comité Técnico:")) continue;
+        
+         if (linea.includes("---")) {
+           htmlFinal += "<hr style='border: none; border-top: 1px solid var(--border); margin: 24px 0;'>";
+         } else if (linea.includes("ESTUDIO BIOMÉTRICO") || linea.includes("INFORME DE EVOLUCIÓN") || linea.startsWith("EVALUACIÓN INICIAL PARA:")) {
+           htmlFinal += "<div style='background: linear-gradient(135deg, #64748b, #475569); padding: 18px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); color: white;'>";
+           var icono = linea.includes("INFORME") ? "📈" : "📋";
+           var textoLimpioTitulo = linea.replace(/📈|📋/g, "").trim();
+           htmlFinal += "<h3 style='font-size: 15.5px; font-weight: 800; margin: 0; text-transform: uppercase; display: flex; align-items: center; gap: 8px; line-height: 1.4;'><span style='font-size:18px;'>" + icono + "</span> " + textoLimpioTitulo + "</h3>";
+           dentroDeCajaTitulo = true;
+         } else if (linea.includes("Análisis de punto de partida:") || linea.includes("Análisis comparativo:")) {
+           htmlFinal += "<div style='margin-top: 8px; color: #e2e8f0; font-size: 13px; font-style: italic; line-height: 1.4;'>" + linea + "</div>";
+           if (dentroDeCajaTitulo) { htmlFinal += "</div>"; dentroDeCajaTitulo = false; }
+         } else if (linea.startsWith("Esperando a que el cliente")) {
+            htmlFinal += "<p style='text-align: center; color: var(--text-muted); font-style: italic;'>" + linea + "</p>";
+         } else {
+           if (linea.match(/^#{1,3}\s/)) {
+              var tituloLimpioH3 = linea.replace(/^#{1,3}\s/, "").replace(/<strong[^>]*>/g, "").replace(/<\/strong>/g, "").trim();
+              htmlFinal += "<div style='margin-top: 28px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;'><h3 style='color: var(--primary); font-size: 16px; font-weight: 800; margin: 0;'>" + tituloLimpioH3 + "</h3></div>";
+           } else if (linea.startsWith("- ") || linea.startsWith("* ")) {
+              htmlFinal += "<p style='text-align: justify; margin-bottom: 8px; font-size: 14.5px; color: var(--text-main); padding-left: 14px; position: relative;'><span style='position: absolute; left: 0; color: var(--accent);'>•</span>" + linea.substring(2) + "</p>";
+           } else if (linea.startsWith("<strong")) {
+              htmlFinal += "<p style='text-align: justify; margin-top: 8px; margin-bottom: 8px; font-size: 14.5px; color: var(--primary-light);'>" + linea + "</p>";
+           } else {
+              htmlFinal += "<p style='text-align: justify; margin-bottom: 14px; line-height: 1.6; font-size: 14.5px; color: var(--text-main);'>" + linea + "</p>";
+           }
+         }
+       }
+     }
+     if (dentroDeCajaTitulo) { htmlFinal += "</div>"; dentroDeCajaTitulo = false; }
+    
+     if (Object.keys(datosBascula).length > 0) {
+       function obtenerValorMetrica(nombreBuscado) {
+         for (var clave in datosBascula) { if (clave.toLowerCase().trim().includes(nombreBuscado.toLowerCase().trim())) return datosBascula[clave]; }
+         return "-";
+       }
+       var mPeso = formatearDiferencia(obtenerValorMetrica("peso"), obtenerValorAnterior("peso"));
+       var mIMC = formatearDiferencia(obtenerValorMetrica("imc"), obtenerValorAnterior("imc"));
+       var mGrasa = formatearDiferencia(obtenerValorMetrica("grasa") !== "-" ? obtenerValorMetrica("grasa") : obtenerValorMetrica("% grasa"), obtenerValorAnterior("grasa") !== "-" ? obtenerValorAnterior("grasa") : obtenerValorAnterior("% grasa"));
+       var mMasaMusc = formatearDiferencia(obtenerValorMetrica("masa muscular"), obtenerValorAnterior("masa muscular"));
+       var mTMB = formatearDiferencia(obtenerValorMetrica("tmb") !== "-" ? obtenerValorMetrica("tmb") : obtenerValorMetrica("metab"), obtenerValorAnterior("tmb"));
+      
+       var mPecho = formatearDiferencia(obtenerValorMetrica("pecho"), obtenerValorAnterior("pecho"));
+       var mAbdomenActual = obtenerValorMetrica("abdomen") !== "-" ? obtenerValorMetrica("abdomen") : obtenerValorMetrica("cintura");
+       var mAbdomenAnterior = obtenerValorAnterior("abdomen") !== "-" ? obtenerValorAnterior("abdomen") : obtenerValorAnterior("cintura");
+       var mAbdomen = formatearDiferencia(mAbdomenActual, mAbdomenAnterior);
+       var mCadera = formatearDiferencia(obtenerValorMetrica("cadera"), obtenerValorAnterior("cadera"));
+      
+       var mBicepsActual = obtenerValorMetrica("biceps") !== "-" ? obtenerValorMetrica("biceps") : obtenerValorMetrica("bíceps");
+       var mBicepsAnterior = obtenerValorAnterior("biceps") !== "-" ? obtenerValorAnterior("biceps") : obtenerValorAnterior("bíceps");
+       var mBiceps = formatearDiferencia(mBicepsActual, mBicepsAnterior);
+      
+       var mMuslosActual = celdas.length > 0 ? celdas[celdas.length - 1].trim() : "-";
+       var mMuslosAnterior = celdasAnt.length > 0 ? celdasAnt[celdasAnt.length - 1].trim() : "-";
+       var mMuslos = formatearDiferencia(mMuslosActual, mMuslosAnterior);
+
+       htmlFinal += "<div style='margin-top: 36px; margin-bottom: 24px;'>";
+       htmlFinal += "<h4 style='font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;'>Métricas Principales</h4>";
+      
+       htmlFinal += "<div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>";
+      
+       var widgets = [
+         { nom: "Peso", val: mPeso, icon: "⚖️" },
+         { nom: "Pecho", val: mPecho, icon: "📏" },
+         { nom: "IMC", val: mIMC, icon: "📊" },
+         { nom: "Cintura", val: mAbdomen, icon: "📏" },
+         { nom: "Masa Muscular", val: mMasaMusc, icon: "💪" },
+         { nom: "Cadera", val: mCadera, icon: "📏" },
+         { nom: "Grasa Corporal", val: mGrasa, icon: "💧" },
+         { nom: "Bíceps D/I", val: mBiceps, icon: "📏" },
+         { nom: "Metab. Basal", val: mTMB, icon: "🔥" },
+         { nom: "Pierna D/I", val: mMuslos, icon: "📏" }
+       ];
+
+       for (var w = 0; w < widgets.length; w++) {
+         htmlFinal += "<div style='background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center;'>";
+         htmlFinal += "<div style='display: flex; align-items: center; gap: 8px; margin-bottom: 8px;'>";
+         htmlFinal += "<span style='font-size: 16px;'>" + widgets[w].icon + "</span>";
+         htmlFinal += "<span style='font-size: 12.5px; font-weight: 600; color: var(--text-muted); line-height: 1.2;'>" + widgets[w].nom + "</span>";
+         htmlFinal += "</div>";
+         htmlFinal += "<div style='font-size: 15px; font-weight: 800; color: var(--primary); line-height: 1.3;'>" + widgets[w].val + "</div>";
+         htmlFinal += "</div>";
+       }
+       htmlFinal += "</div></div>";
+     }
+     return htmlFinal;
+   }
+
+   // 🌟 RESTAURADO: RENDERIZADOR COMPLETO DE RUTINA CON DÍAS Y MARCAS
    function renderizarRutina(tienePlanGenerado) {
      const contenedorRutina = document.getElementById('subtab-rutina');
      if (!tienePlanGenerado) {
@@ -436,14 +627,15 @@
      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
        <div style="font-size: 12px; font-weight: 800; color: #111827; text-transform: uppercase; margin-bottom: 8px;">⚠️ NOTA IMPORTANTE</div>
        <div style="font-size: 13.5px; color: #111827; line-height: 1.5;">
-         Antes de cada sesión, dedica <strong>5 - 10 minutos a un calentamiento dinámico</strong>.
+         Antes de cada sesión, dedica <strong>5 - 10 minutos a un calentamiento dinámico</strong> con movimientos como balanceos de brazos, círculos de cadera y esprines en el sitio. Esto preparará tu cuerpo y prevendrá lesiones. Al finalizar, puedes realizar estiramientos estáticos de los músculos trabajados.<br><br>
+         <strong>💪 ¡Y recuerda la importancia de un buen descanso cada día!</strong>
        </div>
      </div>`;
 
      for (let r = 1; r < datosApp.ejercicios.length; r++) {
        const fila = datosApp.ejercicios[r];
-       const col1 = fila[0] ? fila[0].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1") : "";
-       const col2 = fila[1] ? fila[1].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1") : "";
+       const col1 = fila[0] ? fila[0].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1") : "";
+       const col2 = fila[1] ? fila[1].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1") : "";
        const col3 = fila[2] ? fila[2].toString().trim() : "";
        const col4 = fila[3] ? fila[3].toString().trim() : "";
        const col5 = fila[4] ? fila[4].toString().trim() : "";
@@ -462,7 +654,7 @@
 
        if (col1 !== "" && col3 === "" && col4 === "" && col5 === "") {
          let textoLargo = col1 + (col2 ? " - " + col2 : "");
-         htmlRutina += `<div style="color: var(--primary); padding: 12px 0; border-bottom: 2px solid var(--border); margin: 24px 0 16px 0; font-weight: 800; font-size: 16px;">🗓️ ${textoLargo}</div>`;
+         htmlRutina += `<div style="color: var(--primary); padding: 12px 0; border-bottom: 2px solid var(--border); margin: 24px 0 16px 0; font-weight: 800; font-size: 16px; display: flex; align-items: center;"><span style="font-size: 20px; margin-right: 8px;">🗓️</span> ${textoLargo}</div>`;
          continue;
        }
 
@@ -470,16 +662,24 @@
          let diaMapeo = col1;
          let musculoMapeo = col2;
          let ejercicioMapeo = col3;
-         let seriesMapeo = col4;
-         let repsMapeo = col5;
+         let seriesMapeo = "";
+         let repsMapeo = "";
+
+         if (col4 !== "" && col5 === "") { seriesMapeo = col4; } 
+         else if (col4 !== "" && col5 !== "") { seriesMapeo = col4; repsMapeo = col5; }
 
          if (col3 === "") { diaMapeo = ""; musculoMapeo = col1; ejercicioMapeo = col2; seriesMapeo = col3; repsMapeo = col4; }
 
          let musculoDeducido = deducirMusculo(ejercicioMapeo);
-         let musculoFinal = musculoMapeo || musculoDeducido;
+         let musculoFinal = "";
+         if (musculoMapeo.toLowerCase().includes("superior") || musculoMapeo.toLowerCase().includes("inferior")) {
+            musculoFinal = musculoDeducido || musculoMapeo;
+         } else {
+            musculoFinal = musculoMapeo || musculoDeducido;
+         }
 
-         seriesMapeo = (seriesMapeo || "").replace(/series/gi, "").trim();
-         repsMapeo = (repsMapeo || "").replace(/repeticiones/gi, "").trim();
+         seriesMapeo = (seriesMapeo || "").replace(/series/gi, "").replace(/serie/gi, "").trim();
+         repsMapeo = (repsMapeo || "").replace(/repeticiones/gi, "").replace(/reps/gi, "").trim();
 
          let textoReferencia = "";
          if (ultPeso !== "" || ultReps !== "") {
@@ -492,28 +692,32 @@
          htmlRutina += `
          <div class="card card-ejercicio-item" data-ejercicio="${ejEscaped}" style="padding: 14px; margin-bottom: 10px;">
            ${(diaMapeo || musculoFinal) ? `
-           <div style="display: inline-flex; align-items: center; background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 6px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">
-             <span style="margin-right: 4px;">🏋️‍♀️</span> ${diaMapeo ? diaMapeo + (musculoFinal ? ' - ' : '') : ''}${musculoFinal}
+           <div style="display: inline-flex; align-items: center; background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 6px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+             <span style="margin-right: 4px; font-size: 11px;">🏋️‍♀️</span>
+             ${diaMapeo ? diaMapeo + (musculoFinal ? ' - ' : '') : ''}${musculoFinal}
            </div>` : ''}
 
-           <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
-             <span style="margin-right: 6px;">💪</span><span>${ejercicioMapeo}</span>
+           <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; line-height: 1.3; display: flex; align-items: flex-start;">
+             <span style="margin-right: 6px; font-size: 13.5px;">💪</span>
+             <span>${ejercicioMapeo}</span>
            </div>
 
            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-             ${seriesMapeo ? `<span style="background: #f1f5f9; color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border);">🔄 Series: ${seriesMapeo}</span>` : ''}
-             ${repsMapeo ? `<span style="background: #f8fafc; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border);">🎯 Reps: ${repsMapeo}</span>` : ''}
+             ${seriesMapeo ? `<span style="background: #f1f5f9; color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); display: flex; align-items: center; gap: 4px;"><span style="font-size:11px;">🔄</span> Series: ${seriesMapeo}</span>` : ''}
+             ${repsMapeo ? `<span style="background: #f8fafc; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); display: flex; align-items: center; gap: 4px;"><span style="font-size:11px;">🎯</span> Reps: ${repsMapeo}</span>` : ''}
            </div>
 
-           ${textoReferencia ? `<div style="font-size: 11px; color: #0369a1; background: #e0f2fe; padding: 4px 8px; border-radius: 6px; margin-top: 8px;">${textoReferencia}</div>` : ''}
+           ${textoReferencia ? `<div style="font-size: 11px; color: #0369a1; background: #e0f2fe; padding: 4px 8px; border-radius: 6px; margin-top: 8px; font-weight: 500;">${textoReferencia}</div>` : ''}
 
            <div class="box-marca-referencia" style="margin-top: 10px; justify-content: flex-start; gap: 10px;">
              <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Tu marca:</span>
              <div style="display:flex; align-items:center; gap:4px;">
-               <input type="number" placeholder="Kg" class="input-single-log input-log-kg" step="0.5" value="${ultPeso && ultPeso !== '0' ? ultPeso : ''}"> <span style="font-size:10px;">kg</span>
+               <input type="number" placeholder="Kg" class="input-single-log input-log-kg" step="0.5" value="${ultPeso && ultPeso !== '0' ? ultPeso : ''}">
+               <span style="font-size:10px; color:var(--text-muted);">kg</span>
              </div>
              <div style="display:flex; align-items:center; gap:4px;">
-               <input type="number" placeholder="Reps" class="input-single-log input-log-reps" value="${ultReps || ''}"> <span style="font-size:10px;">reps</span>
+               <input type="number" placeholder="Reps" class="input-single-log input-log-reps" value="${ultReps || ''}">
+               <span style="font-size:10px; color:var(--text-muted);">reps</span>
              </div>
            </div>
          </div>`;
@@ -530,6 +734,7 @@
      contenedorRutina.innerHTML = htmlRutina;
    }
 
+   // 🌟 RESTAURADO: RENDERIZADOR COMPLETO DE ALIMENTACIÓN
    function renderizarDieta() {
      const contenedorAlimentacion = document.getElementById('subtab-dieta');
      if (!datosApp.alimentacion || datosApp.alimentacion.length <= 1) {
@@ -540,33 +745,49 @@
      let htmlDieta = "<div style='display: flex; flex-direction: column; gap: 12px;'>";
      for (let a = 1; a < datosApp.alimentacion.length; a++) {
        const filaA = datosApp.alimentacion[a];
-       const parametro = filaA[0] ? filaA[0].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1") : "";
-       if (!parametro || parametro.toLowerCase().includes("parámetro") || parametro.toLowerCase().includes("métrica")) continue;
+       const parametro = filaA[0] ? filaA[0].toString().trim().replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1") : "";
+       if (!parametro || parametro.toLowerCase().includes("parámetro") || parametro.toLowerCase().includes("métrica") || parametro.toLowerCase() === "descanso") continue;
 
        let valor = "";
        for (let c = 1; c < filaA.length; c++) {
          let content = filaA[c] ? filaA[c].toString().trim() : "";
-         if (content.match(/\d/)) { valor = content.replace(/\*\*(.*?)\*\*/g, "$1"); break; }
+         if (content.match(/\d/)) { valor = content.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1"); break; }
        }
        if (!valor) valor = "-";
 
-       const pLow = parametro.toLowerCase();
-       let icono = "🍏"; let esDestacado = false;
-       if (pLow.includes("calorías objetivo")) { icono = "🎯"; esDestacado = true; }
-       else if (pLow.includes("proteína")) icono = "🥩";
-       else if (pLow.includes("carbohidrato")) icono = "🍚";
-       else if (pLow.includes("grasa")) icono = "🥑";
+       const paramLower = parametro.toLowerCase();
+       let icono = "🍏"; let colorFondo = "#ffffff"; let colorTexto = "var(--primary)"; let esDestacado = false;
+
+       if (paramLower.includes("calorías objetivo") || paramLower.includes("calorias objetivo")) {
+         icono = "🎯"; colorFondo = "var(--primary)"; colorTexto = "#ffffff"; esDestacado = true;
+       } else if (paramLower.includes("proteína") || paramLower.includes("proteina")) {
+         icono = "🥩";
+       } else if (paramLower.includes("carbohidrato") || paramLower.includes("hidrato")) {
+         icono = "🍚";
+       } else if (paramLower.includes("grasa")) {
+         icono = "🥑";
+       } else if (paramLower.includes("gasto energético") || paramLower.includes("get")) {
+         icono = "⚡";
+       } else if (paramLower.includes("metabolismo") || paramLower.includes("tmb")) {
+         icono = "🔥";
+       }
 
        if (esDestacado) {
          htmlDieta += `
-         <div style="background: var(--primary); border-radius: 12px; padding: 14px; color: white; display: flex; align-items: center; justify-content: space-between;">
-           <div style="display: flex; align-items: center; gap: 10px;"><span>${icono}</span><strong>${parametro}</strong></div>
+         <div style="background: ${colorFondo}; border-radius: 12px; padding: 14px; color: ${colorTexto}; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1); margin-bottom: 8px;">
+           <div style="display: flex; align-items: center; gap: 10px;">
+             <div style="background: rgba(255,255,255,0.1); width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">${icono}</div>
+             <div style="font-weight: 600; font-size: 13px;">${parametro}</div>
+           </div>
            <div style="font-weight: 800; font-size: 16px;">${valor}</div>
          </div>`;
        } else {
          htmlDieta += `
-         <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;">
-           <div style="display: flex; align-items: center; gap: 8px;"><span>${icono}</span><span style="font-weight: 600; font-size: 12.5px;">${parametro}</span></div>
+         <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+           <div style="display: flex; align-items: center; gap: 8px;">
+             <div style="background: var(--bg-color); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px;">${icono}</div>
+             <div style="font-weight: 600; font-size: 12.5px; color: var(--text-main);">${parametro}</div>
+           </div>
            <div style="font-weight: 700; font-size: 13.5px; color: var(--primary);">${valor}</div>
          </div>`;
        }
@@ -615,9 +836,82 @@
      }
    }
 
-   function formatearInformeHTML(textoPlano) {
-     if (!textoPlano) return "Buscando datos...";
-     return textoPlano.replace(/\*\*(.*?)\*\*/g, "<strong style='color:var(--primary);'>$1</strong>").replace(/\n/g, "<br>");
+   let filesArray = [];
+   document.getElementById('captura-pantalla').addEventListener('change', e => {
+     filesArray = e.target.files;
+     if (filesArray.length > 0) {
+       document.getElementById('drop-zone').style.display = 'none';
+       document.getElementById('vista-archivo').classList.remove('hidden');
+       document.getElementById('nombre-archivo-seleccionado').innerText = filesArray.length + " capturas seleccionadas";
+     }
+   });
+
+   function reiniciarCarga() {
+     document.getElementById('captura-pantalla').value = "";
+     filesArray = [];
+     document.getElementById('drop-zone').style.display = 'block';
+     document.getElementById('vista-archivo').classList.add('hidden');
+   }
+
+   async function enviarCapturasMultiples() {
+     if (filesArray.length === 0) { mostrarAlertaCustom("Por favor, selecciona tus capturas de la galería."); return; }
+     document.getElementById('btn-enviar').classList.add('hidden');
+     document.getElementById('estado-carga').classList.remove('hidden');
+     subirArchivoSecuencial(0);
+   }
+
+   function subirArchivoSecuencial(indice) {
+     if (indice >= filesArray.length) {
+       ejecutarAnalisisDeMetricasInmediato();
+       return;
+     }
+     const archivo = filesArray[indice];
+     const lector = new FileReader();
+     document.getElementById('texto-estado-carga').innerText = `Subiendo captura ${indice + 1} de ${filesArray.length}...`;
+
+     lector.onloadend = async function() {
+       try {
+         const res = await apiCall("subirImagenDesdeApp", { base64Data: lector.result, nombreArchivo: archivo.name });
+         if (res.exito) subirArchivoSecuencial(indice + 1);
+         else { restablecerBotonCarga(); mostrarAlertaCustom("Fallo al subir " + archivo.name); }
+       } catch(e) { restablecerBotonCarga(); mostrarAlertaCustom("Error al subir archivo."); }
+     };
+     lector.readAsDataURL(archivo);
+   }
+
+   async function ejecutarAnalisisDeMetricasInmediato() {
+     document.getElementById('texto-estado-carga').innerText = "Analizando tu evolución con IA (1-2 min)...";
+     try {
+       const res = await apiCall("procesarSeguimientoInmediato");
+       if (res && res.exito) {
+         mostrarAlertaCustom("¡Análisis completado!");
+         setTimeout(() => window.location.reload(), 2000);
+       }
+     } catch(e) {
+       restablecerBotonCarga();
+       mostrarAlertaCustom("Error en el análisis.");
+     }
+   }
+
+   function restablecerBotonCarga() {
+     document.getElementById('btn-enviar').classList.remove('hidden');
+     document.getElementById('estado-carga').classList.add('hidden');
+     reiniciarCarga();
+   }
+
+   function deducirMusculo(nombreEj) {
+     const ejLow = (nombreEj || "").toLowerCase();
+     if (ejLow.includes("press de banca") || ejLow.includes("flexiones") || ejLow.includes("aperturas") || ejLow.includes("cruce") || ejLow.includes("pecho") || ejLow.includes("pectoral")) return "Pecho";
+     if (ejLow.includes("remo") || ejLow.includes("dominadas") || ejLow.includes("jalón") || ejLow.includes("pullover") || ejLow.includes("espalda") || ejLow.includes("dorsal")) return "Espalda";
+     if (ejLow.includes("press militar") || ejLow.includes("elevaciones laterales") || ejLow.includes("elevaciones frontales") || ejLow.includes("pájaro") || ejLow.includes("hombro") || ejLow.includes("deltoides")) return "Hombros";
+     if (ejLow.includes("curl") || ejLow.includes("bíceps") || ejLow.includes("biceps")) return "Bíceps";
+     if (ejLow.includes("tríceps") || ejLow.includes("triceps") || ejLow.includes("fondos") || ejLow.includes("press francés") || ejLow.includes("extensión")) return "Tríceps";
+     if (ejLow.includes("sentadilla") || ejLow.includes("zancada") || ejLow.includes("prensa") || ejLow.includes("extensión de piernas") || ejLow.includes("cuádriceps") || ejLow.includes("cuadriceps") || ejLow.includes("bulgara")) return "Cuádriceps";
+     if (ejLow.includes("peso muerto") || ejLow.includes("curl femoral") || ejLow.includes("isquio")) return "Isquiosurales";
+     if (ejLow.includes("hip thrust") || ejLow.includes("puente de glúteo") || ejLow.includes("patada de glúteo") || ejLow.includes("glúteo") || ejLow.includes("gluteo")) return "Glúteos";
+     if (ejLow.includes("gemelo") || ejLow.includes("pantorrilla") || ejLow.includes("elevación de talones")) return "Gemelos";
+     if (ejLow.includes("plancha") || ejLow.includes("crunch") || ejLow.includes("rueda") || ejLow.includes("abdomen") || ejLow.includes("core")) return "Abdomen";
+     return "";
    }
 
    function navegarA(idDestino, boton) {
