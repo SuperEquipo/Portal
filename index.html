@@ -13,7 +13,6 @@
 
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="manifest" href="manifest.json">
 
 <style>
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #0f172a; }
@@ -42,47 +41,31 @@ iframe { width: 100%; height: 100%; border: none; display: block; position: abso
 <iframe id="pantalla-app" allow="camera; microphone; fullscreen; geolocation"></iframe>
 
 <script>
-// 1. CAPTURA Y PERSISTENCIA DEL ID DE CLIENTE
-const urlParams = new URLSearchParams(window.location.search);
-let clienteId = urlParams.get('id');
-
-if (clienteId) {
-  // Si entra desde el enlace del correo, guarda el ID en la memoria del teléfono
-  localStorage.setItem('superequipo_cliente_id', clienteId);
-} else {
-  // Si abre la App desde el icono del escritorio de Android, recupera el ID guardado
-  clienteId = localStorage.getItem('superequipo_cliente_id');
-}
-
-const parametrosWeb = clienteId ? ("?id=" + clienteId) : "";
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const parametrosWeb = window.location.search;
 const urlGoogleScript = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
-const iframe = document.getElementById("pantalla-app");
-const splash = document.getElementById("splash");
 
-if (clienteId) {
+if (isIOS) {
+  // 🍎 EN IPHONE (iOS): Mantiene el iframe PWA nativo (Funciona al 100%)
+  const iframe = document.getElementById("pantalla-app");
+  const splash = document.getElementById("splash");
+
   iframe.src = urlGoogleScript + parametrosWeb;
-} else {
-  // Si un usuario abre la App sin haber pulsado nunca un correo
-  splash.style.display = "none";
-  document.body.innerHTML = "<div style='color:white; text-align:center; padding:50px 20px; font-family:sans-serif;'><h2>⚠️ Enlace no reconocido</h2><p style='color:#94a3b8;'>Por favor, abre la App por primera vez desde el enlace personal que recibiste en tu correo electrónico.</p></div>";
-}
 
-iframe.onload = function() {
-  splash.style.opacity = "0";
-  setTimeout(() => splash.style.display = "none", 500);
-  iframe.style.opacity = "1";
-};
+  iframe.onload = function() {
+    splash.style.opacity = "0";
+    setTimeout(() => splash.style.display = "none", 500);
+    iframe.style.opacity = "1";
+  };
 
-window.addEventListener('message', function(event) {
-  if (event.data === 'recargarApp') {
-    window.location.reload();
-  }
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js');
+  window.addEventListener('message', function(event) {
+    if (event.data === 'recargarApp') {
+      window.location.reload();
+    }
   });
+} else {
+  // 🤖 EN ANDROID: Redirección limpia fuera del iframe (Elimina el Error 400 por completo)
+  window.location.href = urlGoogleScript + parametrosWeb;
 }
 </script>
 </body>
