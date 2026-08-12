@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HIGH PLACE</title>
 
+<!-- Etiquetas PWA para Android e iOS -->
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -13,6 +14,7 @@
 
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 
 <style>
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #0f172a; }
@@ -41,31 +43,31 @@ iframe { width: 100%; height: 100%; border: none; display: block; position: abso
 <iframe id="pantalla-app" allow="camera; microphone; fullscreen; geolocation"></iframe>
 
 <script>
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const parametrosWeb = window.location.search;
 const urlGoogleScript = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
+const iframe = document.getElementById("pantalla-app");
+const splash = document.getElementById("splash");
 
-if (isIOS) {
-  // 🍎 EN IPHONE (iOS): Carga dentro del Iframe como siempre
-  const iframe = document.getElementById("pantalla-app");
-  const splash = document.getElementById("splash");
+// Carga el iframe con la URL limpia
+iframe.src = urlGoogleScript + parametrosWeb;
 
-  iframe.src = urlGoogleScript + parametrosWeb;
+iframe.onload = function() {
+  splash.style.opacity = "0";
+  setTimeout(() => splash.style.display = "none", 500);
+  iframe.style.opacity = "1";
+};
 
-  iframe.onload = function() {
-    splash.style.opacity = "0";
-    setTimeout(() => splash.style.display = "none", 500);
-    iframe.style.opacity = "1";
-  };
+window.addEventListener('message', function(event) {
+  if (event.data === 'recargarApp') {
+    window.location.reload();
+  }
+});
 
-  window.addEventListener('message', function(event) {
-    if (event.data === 'recargarApp') {
-      window.location.reload();
-    }
+// Registrar Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js');
   });
-} else {
-  // 🤖 EN ANDROID: Redirección directa para saltar el bloqueo de Iframe de Chrome
-  window.location.href = urlGoogleScript + parametrosWeb;
 }
 </script>
 </body>
