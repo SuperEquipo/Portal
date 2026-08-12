@@ -340,6 +340,7 @@
        params.action = action;
        params.carpetaId = carpetaId;
        params.callback = callbackName;
+       params._t = Date.now();
 
        const queryString = new URLSearchParams();
        for (const key in params) {
@@ -380,11 +381,15 @@
        return;
      }
 
-     try {
+    try {
        datosApp = await apiCall("obtenerDatos");
-       inicializarInterfaz();
+       if (datosApp && datosApp.nombre) {
+         inicializarInterfaz();
+       } else {
+         document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Pulsa para reintentar</button></p>";
+       }
      } catch (err) {
-       mostrarAlertaCustom("Error de conexión. Inténtalo de nuevo.");
+       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Error de red. Pulsa para reintentar</button></p>";
      } finally {
        const splash = document.getElementById('splash-loader');
        splash.style.opacity = '0';
