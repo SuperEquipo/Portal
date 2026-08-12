@@ -377,24 +377,34 @@
 
      if (!carpetaId) {
        document.getElementById('splash-loader').style.display = 'none';
-       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center;'>Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.</p>";
+       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'>Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.</p>";
        return;
      }
 
-    try {
-       datosApp = await apiCall("obtenerDatos");
-       if (datosApp && datosApp.nombre) {
-         inicializarInterfaz();
-       } else {
-         document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Pulsa para reintentar</button></p>";
+     // 🌟 REINTENTO SILENCIOSO AUTOMÁTICO EN SEGUNDO PLANO (Auto-Despertador de Google)
+     let intentos = 0;
+     let cargadoExito = false;
+
+     while (intentos < 3 && !cargadoExito) {
+       try {
+         intentos++;
+         datosApp = await apiCall("obtenerDatos");
+         if (datosApp && datosApp.nombre) {
+           cargadoExito = true;
+           inicializarInterfaz();
+         }
+       } catch (err) {
+         if (intentos < 3) await new Promise(r => setTimeout(r, 1200));
        }
-     } catch (err) {
-       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Error de red. Pulsa para reintentar</button></p>";
-     } finally {
-       const splash = document.getElementById('splash-loader');
-       splash.style.opacity = '0';
-       setTimeout(() => splash.style.display = 'none', 400);
      }
+
+     if (!cargadoExito) {
+       document.getElementById('contenido-informe').innerHTML = "<p style='text-align:center; padding:20px;'><button onclick='window.location.reload()' class='btn-primary'>🔄 Conexión lenta. Pulsa para reintentar</button></p>";
+     }
+
+     const splash = document.getElementById('splash-loader');
+     splash.style.opacity = '0';
+     setTimeout(() => splash.style.display = 'none', 400);
    });
 
    function inicializarInterfaz() {
