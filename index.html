@@ -3,16 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>HIGH PLACE</title>
+<title>HIGH PLACE - DIAGNÓSTICO</title>
 
-<meta name="theme-color" content="#0f172a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="HIGH PLACE">
+<!-- CONSOLA DE DIAGNÓSTICO VISUAL EN PANTALLA -->
+<div id="caja-diagnostico" style="position:fixed; top:0; left:0; right:0; background:#dc2626; color:white; font-size:11px; font-family:monospace; padding:12px; z-index:999999; max-height:220px; overflow-y:auto; box-shadow:0 4px 10px rgba(0,0,0,0.5); display:none;">
+  <div style="font-weight:bold; margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.3); padding-bottom:4px;">🐞 CONSOLA DE DIAGNÓSTICO EN VIVO:</div>
+  <div id="texto-diagnostico"></div>
+</div>
 
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" href="icon-192.png">
+<script>
+function logDiagnostico(msg) {
+  const box = document.getElementById('caja-diagnostico');
+  const text = document.getElementById('texto-diagnostico');
+  if (box && text) {
+    box.style.display = 'block';
+    text.innerHTML += "• " + msg + "<br>";
+  }
+}
+
+// Captura de errores globales de JavaScript
+window.onerror = function(message, source, lineno, colno, error) {
+  logDiagnostico("ERROR JS: " + message + " (Línea: " + lineno + ")");
+  return false;
+};
+
+// Captura de errores de red o promesas (fetch)
+window.onunhandledrejection = function(event) {
+  logDiagnostico("ERROR RED/FETCH: " + (event.reason ? (event.reason.message || event.reason) : event));
+};
+</script>
 
 <style>
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #0f172a; }
@@ -35,7 +54,7 @@ iframe { width: 100%; height: 100%; border: none; display: block; position: abso
 
 <div id="splash">
   <div class="spinner"></div>
-  <h2 style="margin:0; font-size:16px; font-weight:600;">Cargando tu perfil...</h2>
+  <h2 style="margin:0; font-size:16px; font-weight:600;">Cargando diagnóstico...</h2>
 </div>
 
 <iframe id="pantalla-app" allow="camera; microphone; fullscreen; geolocation"></iframe>
@@ -45,28 +64,32 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const parametrosWeb = window.location.search;
 const urlGoogleScript = "https://script.google.com/macros/s/AKfycbwy2UV4XzREfRpIX45eZq4wZ9gO_O_QM79z8r3l0mbX64XC6-sG_KJCYRUkQxDj5tllWw/exec";
 
-if (isIOS) {
-  // 🍎 EN IPHONE (iOS): Restaurado el Iframe original que funcionaba al 100%
-  const iframe = document.getElementById("pantalla-app");
-  const splash = document.getElementById("splash");
+// Log inicial de entorno
+logDiagnostico("Sistema detectado: " + (isIOS ? "iOS (iPhone)" : "Android/PC"));
+logDiagnostico("Parámetros URL recibidos: " + (parametrosWeb || "NINGUNO (Falta ?id=...)"));
 
-  iframe.src = urlGoogleScript + parametrosWeb;
-
-  iframe.onload = function() {
-    splash.style.opacity = "0";
-    setTimeout(() => splash.style.display = "none", 500);
-    iframe.style.opacity = "1";
-  };
-
-  window.addEventListener('message', function(event) {
-    if (event.data === 'recargarApp') {
-      window.location.reload();
-    }
-  });
-} else {
-  // 🤖 EN ANDROID: Redirección limpia fuera del iframe para evitar el Error 400
-  window.location.href = urlGoogleScript + parametrosWeb;
+if (!parametrosWeb.includes("id=")) {
+  logDiagnostico("⚠️ ADVERTENCIA: La URL no contiene el ID del cliente. Falta '?id=...'");
 }
+
+const iframe = document.getElementById("pantalla-app");
+const splash = document.getElementById("splash");
+
+const urlFinal = urlGoogleScript + parametrosWeb;
+logDiagnostico("Intentando cargar destino: " + urlFinal);
+
+iframe.src = urlFinal;
+
+iframe.onload = function() {
+  logDiagnostico("✅ Iframe cargado con éxito en el navegador.");
+  splash.style.opacity = "0";
+  setTimeout(() => splash.style.display = "none", 500);
+  iframe.style.opacity = "1";
+};
+
+iframe.onerror = function() {
+  logDiagnostico("❌ ERROR CRÍTICO: El navegador ha bloqueado la carga del Iframe.");
+};
 </script>
 </body>
 </html>
