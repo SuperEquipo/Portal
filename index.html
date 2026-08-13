@@ -971,13 +971,48 @@
      lector.readAsDataURL(archivo);
    }
 
-   async function ejecutarAnalisisDeMetricasInmediato() {
+  async function ejecutarAnalisisDeMetricasInmediato() {
      document.getElementById('texto-estado-carga').innerText = "Analizando tu evolución con IA (1-2 min)...";
+     const longitudAnterior = datosApp.informe ? datosApp.informe.length : 0;
+
      try {
+       // 1. La IA trabaja aquí todo el tiempo que necesite (30-60 seg)
        const res = await apiPost("procesarSeguimientoInmediato", {});
+
        if (res && res.exito) {
-         mostrarAlertaCustom("¡Análisis completado!");
-         setTimeout(() => window.location.reload(), 2000);
+         const splash = document.getElementById('splash-loader');
+         if (splash) {
+           splash.style.display = 'flex';
+           splash.style.opacity = '1';
+           splash.querySelector('h2').innerText = "Cargando tu nuevo informe...";
+         }
+
+         // 2. Pausa inicial de propagación
+         await new Promise(r => setTimeout(r, 2000));
+
+         // 3. Verificación inteligente: Comprobar que el nuevo informe ha llegado
+         let reintentosCache = 0;
+         let informeNuevoConfirmado = false;
+
+         while (reintentosCache < 3 && !informeNuevoConfirmado) {
+           datosApp = await apiCall("obtenerDatos");
+           if (datosApp.informe && datosApp.informe.length !== longitudAnterior) {
+             informeNuevoConfirmado = true; // Confirmado: llegó el informe nuevo
+           } else {
+             reintentosCache++;
+             if (reintentosCache < 3) await new Promise(r => setTimeout(r, 2000));
+           }
+         }
+
+         // 4. Actualizar la interfaz en vivo
+         inicializarInterfaz();
+         restablecerBotonCarga();
+
+         if (splash) {
+           splash.style.opacity = '0';
+           setTimeout(() => splash.style.display = 'none', 400);
+         }
+         mostrarAlertaCustom("¡Análisis completado! Tu nuevo informe de evolución ya está actualizado en pantalla.");
        } else {
          restablecerBotonCarga();
          mostrarAlertaCustom("El análisis no pudo completarse. Revisa las imágenes.");
