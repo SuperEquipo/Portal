@@ -395,12 +395,11 @@
      let intentos = 0;
      let cargadoExito = false;
 
-     while (intentos < 3 && !cargadoExito) {
+     while (intentos < 4 && !cargadoExito) {
        try {
          intentos++;
          datosApp = await apiCall("obtenerDatos");
          
-         // 🛡️ FILTRO DE SEGURIDAD: Verificar que los datos corresponden al perfil del cliente
          if (datosApp && datosApp.nombre && datosApp.nombre !== "Presentación") {
            cargadoExito = true;
            inicializarInterfaz();
@@ -410,7 +409,7 @@
            return;
          }
        } catch (err) {
-         if (intentos < 3) await new Promise(r => setTimeout(r, 1200));
+         if (intentos < 4) await new Promise(r => setTimeout(r, 2500));
        }
      }
 
