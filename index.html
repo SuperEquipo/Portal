@@ -370,17 +370,10 @@ window.onunhandledrejection = function(e) {
   function apiCall(action, params = {}) {
      return new Promise((resolve, reject) => {
        const callbackName = "cb_" + Math.round(1000000 * Math.random());
-
-       // 🛡️ TIEMPO LÍMITE DE SEGURIDAD (12 SEGUNDOS)
-       const timerTimeout = setTimeout(() => {
-         delete window[callbackName];
-         const elScript = document.getElementById(callbackName);
-         if (elScript) document.body.removeChild(elScript);
-         reject(new Error("Tiempo de espera agotado (Publica una Nueva Implementación en Apps Script)"));
-       }, 12000);
+       chivatoLog("Consultando API: " + action);
 
        window[callbackName] = function(data) {
-         clearTimeout(timerTimeout);
+         chivatoLog("✅ Respuesta recibida para: " + action);
          delete window[callbackName];
          const elScript = document.getElementById(callbackName);
          if (elScript) document.body.removeChild(elScript);
@@ -405,7 +398,7 @@ window.onunhandledrejection = function(e) {
        script.id = callbackName;
        script.src = APPS_SCRIPT_URL + "?" + queryString.toString();
        script.onerror = function() {
-         clearTimeout(timerTimeout);
+         chivatoLog("<span style='color:#ef4444;'>❌ Error de conexión en script</span>");
          delete window[callbackName];
          const elScript = document.getElementById(callbackName);
          if (elScript) document.body.removeChild(elScript);
