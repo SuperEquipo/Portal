@@ -444,7 +444,7 @@
 
      if (datosApp.logoBase64) {
        const imgLogo = document.getElementById('header-logo-img');
-       imgLogo.src = "data:image/png;base64," + datosApp.logoBase64;
+       imgLogo.src = datosApp.logoBase64.startsWith("http") ? datosApp.logoBase64 : ("data:image/png;base64," + datosApp.logoBase64);
        imgLogo.style.display = 'block';
 
        document.getElementById('app-favicon').href = imgLogo.src;
