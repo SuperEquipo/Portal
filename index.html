@@ -450,9 +450,6 @@
        const imgLogo = document.getElementById('header-logo-img');
        imgLogo.src = datosApp.logoBase64.startsWith("http") ? datosApp.logoBase64 : ("data:image/png;base64," + datosApp.logoBase64);
        imgLogo.style.display = 'block';
-
-       document.getElementById('app-favicon').href = imgLogo.src;
-       document.getElementById('app-apple-icon').href = imgLogo.src;
      }
 
    const tarjetaInforme = document.getElementById('tarjeta-informe');
