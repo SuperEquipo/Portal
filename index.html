@@ -153,11 +153,19 @@
 <script>
 function chivatoLog(txt) {
   const el = document.getElementById('chivato-text');
-  if (el) el.innerHTML += "<br>• " + txt;
+  if (el) { el.innerHTML += "<br>• " + txt; }
 }
+
+// 🌟 EJECUCIÓN INMEDIATA (No espera a nada)
+chivatoLog("1. Script de control iniciado.");
+
 window.onerror = function(m, s, l) { 
-  chivatoLog("<span style='color:#ef4444;'>ERROR JS: " + m + " (Línea " + l + ")</span>"); 
+  chivatoLog("<span style='color:#ef4444;'>❌ JS ERROR: " + m + " (Línea: " + l + ")</span>"); 
   return false; 
+};
+
+window.onunhandledrejection = function(e) {
+  chivatoLog("<span style='color:#ef4444;'>❌ RED ERROR: " + (e.reason ? (e.reason.message || e.reason) : e) + "</span>");
 };
 </script>
 
@@ -399,9 +407,9 @@ window.onerror = function(m, s, l) {
    }
 
   
-   window.addEventListener('DOMContentLoaded', async function() {
-     chivatoLog("Inicio de verificación...");
-     const urlParams = new URLSearchParams(window.location.search);
+  window.addEventListener('DOMContentLoaded', async function() {
+  chivatoLog("2. Pagina cargada (DOM Ready).");
+  const urlParams = new URLSearchParams(window.location.search);
      let idFromUrl = urlParams.get('id');
 
     
