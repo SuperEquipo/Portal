@@ -427,21 +427,20 @@
      setTimeout(() => splash.style.display = 'none', 400);
    });
 
-   function mostrarErrorCarga(msg) {
+  function mostrarErrorCarga(msg) {
      const splash = document.getElementById('splash-loader');
      if (splash) splash.style.display = 'none';
      document.getElementById('contenido-informe').innerHTML = `
-       <div style="text-align:center; padding:20px; color:#dc2626;">
-         <p style="font-weight:600; font-size:14px; margin-bottom:16px;">${msg}</p>
-         <button onclick="restablecerPerfilLocal()" class="btn-primary" style="background:#dc2626;">
-           🔄 Restablecer y Cargar enlace del correo
+       <div style="text-align:center; padding:20px; color:#1e3a8a;">
+         <p style="font-weight:600; font-size:14px; margin-bottom:16px; color:#dc2626;">${msg}</p>
+         <button onclick="reintentarCargaApp()" class="btn-primary" style="background:#2563eb;">
+           🔄 Reintentar Cargar App
          </button>
        </div>`;
    }
 
-   function restablecerPerfilLocal() {
-     localStorage.removeItem('superequipo_id_cliente');
-     window.location.href = window.location.pathname;
+   function reintentarCargaApp() {
+     window.location.reload();
    }
 
    function inicializarInterfaz() {
