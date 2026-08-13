@@ -399,8 +399,31 @@ window.onerror = function(m, s, l) {
    }
 
    window.addEventListener('DOMContentLoaded', async function() {
+     chivatoLog("Inicio de verificación...");
      const urlParams = new URLSearchParams(window.location.search);
      let idFromUrl = urlParams.get('id');
+
+     chivatoLog("ID en URL: " + (idFromUrl || "Ninguno"));
+     chivatoLog("ID en Memoria: " + (localStorage.getItem('superequipo_id_cliente') || "Ninguno"));
+
+     // 🛡️ PROTECCIÓN DE MEMORIA: Solo guardar si es un ID de carpeta válido
+     if (idFromUrl && !idFromUrl.includes("presentacion")) {
+       localStorage.setItem('superequipo_id_cliente', idFromUrl);
+       carpetaId = idFromUrl;
+     } else {
+       carpetaId = localStorage.getItem('superequipo_id_cliente') || "";
+     }
+
+     chivatoLog("ID Final seleccionado: " + (carpetaId || "VACÍO"));
+
+     if (!carpetaId) {
+       chivatoLog("❌ DETENIDO: No hay ID disponible.");
+       document.getElementById('splash-loader').style.display = 'none';
+       mostrarErrorCarga("Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.");
+       return;
+     }
+
+     chivatoLog("Solicitando datos a Google para ID: " + carpetaId);
 
      // 🛡️ PROTECCIÓN DE MEMORIA: Solo guardar si es un ID de carpeta válido
      if (idFromUrl && !idFromUrl.includes("presentacion")) {
