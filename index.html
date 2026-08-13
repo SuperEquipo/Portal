@@ -409,24 +409,35 @@ window.onunhandledrejection = function(e) {
    }
 
   window.addEventListener('DOMContentLoaded', async function() {
-  chivatoLog("2. Pagina cargada (DOM Ready).");
-  const urlParams = new URLSearchParams(window.location.search);
-     let idFromUrl = urlParams.get('id');
+     chivatoLog("2. DOMContentLoaded activado.");
 
-    
-     // 🛡️ PROTECCIÓN DE MEMORIA: Solo guardar si es un ID de carpeta válido
+     const esModoApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+     chivatoLog("Entorno: " + (esModoApp ? "📱 APP INSTALADA (Standalone)" : "🌐 NAVEGADOR WEB"));
+
+     const urlParams = new URLSearchParams(window.location.search);
+     let idFromUrl = urlParams.get('id');
+     chivatoLog("ID en URL: " + (idFromUrl || "NINGUNO"));
+
+     let idMemoria = localStorage.getItem('superequipo_id_cliente') || "";
+     chivatoLog("ID en Memoria App: " + (idMemoria || "NINGUNO (Aislado)"));
+
      if (idFromUrl && !idFromUrl.includes("presentacion")) {
        localStorage.setItem('superequipo_id_cliente', idFromUrl);
        carpetaId = idFromUrl;
      } else {
-       carpetaId = localStorage.getItem('superequipo_id_cliente') || "";
+       carpetaId = idMemoria;
      }
 
+     chivatoLog("ID Final procesado: " + (carpetaId || "VACÍO"));
+
      if (!carpetaId) {
+       chivatoLog("❌ SCRIPT DETENIDO: No hay ID ni en URL ni en Memoria PWA.");
        document.getElementById('splash-loader').style.display = 'none';
-       mostrarErrorCarga("Falta el parámetro de acceso. Por favor abre tu enlace personal del correo.");
+       mostrarErrorCarga("Falta el parámetro de acceso. Abre tu enlace del correo.");
        return;
      }
+
+     chivatoLog("Solicitando datos a Google API para ID: " + carpetaId);
 
      let intentos = 0;
      let cargadoExito = false;
