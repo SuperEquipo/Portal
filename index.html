@@ -439,34 +439,47 @@ function chivatoLog(txt) {} // Silenciado en producción
 
      chivatoLog("Solicitando datos a Google API para ID: " + carpetaId);
 
+     let planCompletado = false;
      let intentos = 0;
-     let cargadoExito = false;
+     const splash = document.getElementById('splash-loader');
 
-     while (intentos < 4 && !cargadoExito) {
+     // Bucle de espera activa: mantiene la pantalla azul mientras la IA genera el plan tras rellenar el formulario
+     while (!planCompletado && intentos < 30) {
        try {
          intentos++;
          datosApp = await apiCall("obtenerDatos");
-         
+
          if (datosApp && datosApp.nombre && datosApp.nombre !== "Presentación") {
-           cargadoExito = true;
-           inicializarInterfaz();
-         } else if (datosApp && datosApp.nombre === "Presentación") {
-           
-           mostrarErrorCarga("Se detectó una sesión no válida. Abre tu enlace del correo.");
-           return;
+           const tieneInforme = Boolean(datosApp.informe && datosApp.informe.length > 60 && !datosApp.informe.includes("Esperando a que"));
+           const listo = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInforme || Boolean(datosApp.presentacionUrl);
+
+           if (listo || !datosApp.respuestasEnviadas) {
+             // Caso A: Ya está listo el plan OR Caso B: Es un cliente nuevo que aún no ha rellenado
+             planCompletado = true;
+             inicializarInterfaz();
+           } else {
+             // Caso C: El formulario se ha enviado y el backend está trabajando (mantiene la pantalla azul)
+             if (splash && splash.querySelector('h2')) {
+               splash.querySelector('h2').innerText = "El Comité Técnico está diseñando tu plan... ⚙️";
+             }
+             await new Promise(r => setTimeout(r, 3500));
+           }
+         } else {
+           await new Promise(r => setTimeout(r, 2000));
          }
        } catch (err) {
-         if (intentos < 4) await new Promise(r => setTimeout(r, 2500));
+         await new Promise(r => setTimeout(r, 2500));
        }
      }
 
-     if (!cargadoExito) {
-       mostrarErrorCarga("Conexión lenta con el servidor. Pulsa para reintentar.");
+     if (!planCompletado) {
+       inicializarInterfaz();
      }
 
-     const splash = document.getElementById('splash-loader');
-     splash.style.opacity = '0';
-     setTimeout(() => splash.style.display = 'none', 400);
+     if (splash) {
+       splash.style.opacity = '0';
+       setTimeout(() => splash.style.display = 'none', 400);
+     }
    });
 
   function mostrarErrorCarga(msg) {
@@ -504,7 +517,9 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
 
      // Comprobación inteligente: El plan está listo si hay ejercicios, si hay informe generado o si hay presentación
      const tieneInformeListo = Boolean(datosApp.informe && datosApp.informe.length > 100 && !datosApp.informe.includes("Esperando a que"));
-     const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInformeListo || Boolean(datosApp.presentacionUrl);
+   // El plan está listo si hay informe con contenido real o si hay presentación o ejercicios
+     const tieneInformeReal = Boolean(datosApp.informe && datosApp.informe.length > 60 && !datosApp.informe.includes("Esperando a que"));
+     const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInformeReal || Boolean(datosApp.presentacionUrl);
 
      if (tienePlanGenerado) {
        // 1. PLAN LISTO: Muestra Evaluación, Presentación y oculta avisos
