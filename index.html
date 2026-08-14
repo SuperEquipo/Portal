@@ -12,7 +12,7 @@
  
  <link rel="apple-touch-icon" id="app-apple-icon" href="icon-192.png">
  <link rel="icon" type="image/png" id="app-favicon" href="icon-192.png">
- <link rel="manifest" href="manifest.json">
+<link rel="manifest" id="pwa-manifest-link" href="manifest.json">
 
  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
  <style>
@@ -414,18 +414,41 @@ window.onunhandledrejection = function(e) {
      const esModoApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
      chivatoLog("Entorno: " + (esModoApp ? "📱 APP INSTALADA (Standalone)" : "🌐 NAVEGADOR WEB"));
 
+  // 1. Detección en URL (parámetro search o hash)
      const urlParams = new URLSearchParams(window.location.search);
      let idFromUrl = urlParams.get('id');
-     chivatoLog("ID en URL: " + (idFromUrl || "NINGUNO"));
+     if (!idFromUrl && window.location.hash.includes('id=')) {
+       idFromUrl = window.location.hash.split('id=')[1].split('&')[0];
+     }
 
-     let idMemoria = localStorage.getItem('superequipo_id_cliente') || "";
-     chivatoLog("ID en Memoria App: " + (idMemoria || "NINGUNO (Aislado)"));
+     // 2. Detección en memoria multicapa (LocalStorage, Session y Cookie de respaldo)
+     let idMemoria = localStorage.getItem('superequipo_id_cliente') || 
+                     sessionStorage.getItem('superequipo_id_cliente') || 
+                     (document.cookie.match(/(^| )superequipo_id_cliente=([^;]+)/) || [])[2] || "";
 
      if (idFromUrl) {
-       localStorage.setItem('superequipo_id_cliente', idFromUrl);
        carpetaId = idFromUrl;
+       // Guardar en todas las capas de memoria del dispositivo
+       try { localStorage.setItem('superequipo_id_cliente', idFromUrl); } catch(e){}
+       try { sessionStorage.setItem('superequipo_id_cliente', idFromUrl); } catch(e){}
+       try { document.cookie = "superequipo_id_cliente=" + encodeURIComponent(idFromUrl) + "; path=/; max-age=31536000; SameSite=Lax"; } catch(e){}
+
+       // Inyectar el ID dinámicamente en el Manifest para que "Añadir a pantalla de inicio" guarde el ID fijo
+       try {
+         const manifestBlob = new Blob([JSON.stringify({
+           "name": "Mi Plan Maestro - Superequipo",
+           "short_name": "SUPEREQUIPO",
+           "start_url": window.location.origin + window.location.pathname + "?id=" + idFromUrl,
+           "display": "standalone",
+           "background_color": "#0f172a",
+           "theme_color": "#0f172a",
+           "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+         })], { type: 'application/json' });
+         const manifestTag = document.getElementById('pwa-manifest-link');
+         if (manifestTag) manifestTag.setAttribute('href', URL.createObjectURL(manifestBlob));
+       } catch(e){}
      } else {
-       carpetaId = idMemoria;
+       carpetaId = decodeURIComponent(idMemoria);
      }
 
      chivatoLog("ID Final procesado: " + (carpetaId || "VACÍO"));
