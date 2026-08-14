@@ -562,10 +562,17 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
    }
 
    function abrirPresentacionModal() {
-     if (!datosApp.presentacionUrl) return;
      const modal = document.getElementById('modal-presentacion');
      const iframe = document.getElementById('iframe-presentacion-modal');
-     iframe.src = datosApp.presentacionUrl;
+     
+     // Si tenemos el HTML en memoria, se abre en 0.01 segundos
+     if (datosApp.presentacionHtml) {
+       iframe.srcdoc = datosApp.presentacionHtml;
+     } else if (datosApp.presentacionUrl) {
+       iframe.src = datosApp.presentacionUrl;
+     } else {
+       return;
+     }
      modal.style.display = 'flex';
    }
 
