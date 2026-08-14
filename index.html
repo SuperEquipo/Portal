@@ -421,7 +421,7 @@ window.onunhandledrejection = function(e) {
      let idMemoria = localStorage.getItem('superequipo_id_cliente') || "";
      chivatoLog("ID en Memoria App: " + (idMemoria || "NINGUNO (Aislado)"));
 
-     if (idFromUrl && !idFromUrl.includes("presentacion")) {
+     if (idFromUrl) {
        localStorage.setItem('superequipo_id_cliente', idFromUrl);
        carpetaId = idFromUrl;
      } else {
@@ -451,7 +451,7 @@ window.onunhandledrejection = function(e) {
            cargadoExito = true;
            inicializarInterfaz();
          } else if (datosApp && datosApp.nombre === "Presentación") {
-           localStorage.removeItem('superequipo_id_cliente');
+           
            mostrarErrorCarga("Se detectó una sesión no válida. Abre tu enlace del correo.");
            return;
          }
