@@ -1051,12 +1051,11 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
      lector.readAsDataURL(archivo);
    }
 
-  async function ejecutarAnalisisDeMetricasInmediato() {
-     document.getElementById('texto-estado-carga').innerText = "Analizando tu evolución con IA (1-2 min)...";
-     const longitudAnterior = datosApp.informe ? datosApp.informe.length : 0;
+ async function ejecutarAnalisisDeMetricasInmediato() {
+     document.getElementById('texto-estado-carga').innerText = "Analizando tu evolución (1-2 min)...";
 
      try {
-       // 1. La IA trabaja aquí todo el tiempo que necesite (30-60 seg)
+       // 1. La IA analiza las capturas y escribe el nuevo informe en Drive (30-60 seg)
        const res = await apiPost("procesarSeguimientoInmediato", {});
 
        if (res && res.exito) {
@@ -1067,35 +1066,30 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
            splash.querySelector('h2').innerText = "Cargando tu nuevo informe...";
          }
 
-         // 2. Pausa inicial de propagación
-         await new Promise(r => setTimeout(r, 2000));
+         await new Promise(r => setTimeout(r, 1500));
 
-         // 3. Verificación inteligente: Comprobar que el nuevo informe ha llegado
-         let reintentosCache = 0;
-         let informeNuevoConfirmado = false;
+         // 2. Traemos los datos nuevos de Google y actualizamos la memoria local
+         datosApp = await apiCall("obtenerDatos");
+         try {
+           localStorage.setItem('superequipo_cache_datos_' + carpetaId, JSON.stringify(datosApp));
+         } catch(e){}
 
-         while (reintentosCache < 3 && !informeNuevoConfirmado) {
-           datosApp = await apiCall("obtenerDatos");
-           if (datosApp.informe && datosApp.informe.length !== longitudAnterior) {
-             informeNuevoConfirmado = true; // Confirmado: llegó el informe nuevo
-           } else {
-             reintentosCache++;
-             if (reintentosCache < 3) await new Promise(r => setTimeout(r, 2000));
-           }
-         }
-
-         // 4. Actualizar la interfaz en vivo
+         // 3. Pintamos el nuevo informe y limpiamos el selector de fotos
          inicializarInterfaz();
          restablecerBotonCarga();
 
          if (splash) {
            splash.style.opacity = '0';
-           setTimeout(() => splash.style.display = 'none', 400);
+           setTimeout(() => splash.style.display = 'none', 300);
          }
-         mostrarAlertaCustom("¡Análisis completado! Tu nuevo informe de evolución ya está actualizado en pantalla.");
+
+         // 4. Forzar el salto a la pantalla de Inicio de inmediato
+         navegarA('inicio');
+
+         mostrarAlertaCustom("✅ ¡Estudio biométrico completado! Tu nuevo informe ya está disponible en pantalla.");
        } else {
          restablecerBotonCarga();
-         mostrarAlertaCustom("El análisis no pudo completarse. Revisa las imágenes.");
+         mostrarAlertaCustom("El análisis no pudo completarse. Asegúrate de que las capturas de pantalla sean legibles.");
        }
      } catch(e) {
        restablecerBotonCarga();
@@ -1124,11 +1118,24 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
      return "";
    }
 
-   function navegarA(idDestino, boton) {
+  function navegarA(idDestino, boton) {
+     // 1. Ocultar todas las pestañas y mostrar la seleccionada
      document.querySelectorAll('.pestaña-contenido').forEach(tab => tab.classList.remove('activa'));
-     document.getElementById('tab-' + idDestino).classList.add('activa');
+     const pestañaDestino = document.getElementById('tab-' + idDestino);
+     if (pestañaDestino) pestañaDestino.classList.add('activa');
+
+     // 2. Actualizar el icono activo de la barra inferior
      document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('activo'));
-     boton.classList.add('activo');
+     if (boton && boton.classList) {
+       boton.classList.add('activo');
+     } else {
+       const botonesNav = document.querySelectorAll('nav .nav-item');
+       if (idDestino === 'inicio' && botonesNav[0]) botonesNav[0].classList.add('activo');
+       if (idDestino === 'plan' && botonesNav[1]) botonesNav[1].classList.add('activo');
+       if (idDestino === 'seguimiento' && botonesNav[2]) botonesNav[2].classList.add('activo');
+       if (idDestino === 'bascula' && botonesNav[3]) botonesNav[3].classList.add('activo');
+     }
+
      if (idDestino === 'seguimiento') setTimeout(inicializarGraficoSeguimiento, 100);
      window.scrollTo({ top: 0, behavior: 'smooth' });
    }
