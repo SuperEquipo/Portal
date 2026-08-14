@@ -502,26 +502,28 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
    const tarjetaInforme = document.getElementById('tarjeta-informe');
      document.getElementById('contenido-informe').innerHTML = formatearInformeHTML(datosApp.informe);
 
-     const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1);
+     // Comprobación inteligente: El plan está listo si hay ejercicios, si hay informe generado o si hay presentación
+     const tieneInformeListo = Boolean(datosApp.informe && datosApp.informe.length > 100 && !datosApp.informe.includes("Esperando a que"));
+     const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInformeListo || Boolean(datosApp.presentacionUrl);
 
-     if (datosApp.formUrl && !datosApp.respuestasEnviadas && !tienePlanGenerado) {
-       // 1. CLIENTE NUEVO: Muestra Cuestionario y OCULTA la Evaluación
-       document.getElementById('caja-formulario').classList.remove('hidden');
-       document.getElementById('enlace-formulario').href = datosApp.formUrl;
+     if (tienePlanGenerado) {
+       // 1. PLAN LISTO: Muestra Evaluación, Presentación y oculta avisos
+       document.getElementById('caja-formulario').classList.add('hidden');
        document.getElementById('caja-procesando').classList.add('hidden');
-       if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
+       if (tarjetaInforme) tarjetaInforme.classList.remove('hidden');
 
-     } else if (datosApp.respuestasEnviadas && !tienePlanGenerado) {
-       // 2. FORMULARIO ENVIADO: Muestra "Diseñando tu plan..." y OCULTA la Evaluación
+     } else if (datosApp.respuestasEnviadas) {
+       // 2. FORMULARIO ENVIADO: Muestra "Diseñando tu plan..." mientras la IA trabaja
        document.getElementById('caja-formulario').classList.add('hidden');
        document.getElementById('caja-procesando').classList.remove('hidden');
        if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
 
-     } else if (tienePlanGenerado) {
-       // 3. PLAN LISTO: MUESTRA la Evaluación y Oculta avisos temporales
-       document.getElementById('caja-formulario').classList.add('hidden');
+     } else if (datosApp.formUrl) {
+       // 3. CLIENTE NUEVO: Muestra Cuestionario Pendiente
+       document.getElementById('caja-formulario').classList.remove('hidden');
+       document.getElementById('enlace-formulario').href = datosApp.formUrl;
        document.getElementById('caja-procesando').classList.add('hidden');
-       if (tarjetaInforme) tarjetaInforme.classList.remove('hidden');
+       if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
      }
 
      if (datosApp.presentacionUrl) {
