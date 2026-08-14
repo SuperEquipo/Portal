@@ -142,31 +142,8 @@
 </head>
 <body>
 
- <!-- 📌 BUSCA: <body> -->
-<!-- 📌 PEGA ESTE CHIVATO JUSTO DEBAJO DE <body>: -->
-
-<div id="chivato-pwa" style="position:fixed; top:0; left:0; right:0; background:#0f172a; border-bottom:2px solid #3b82f6; color:#f8fafc; font-size:11px; font-family:monospace; padding:10px; z-index:999999; max-height:180px; overflow-y:auto;">
-  <b>🕵️‍♂️ CHIVATO DE CONTROL EN VIVO:</b><br>
-  <div id="chivato-text">Iniciando lectura...</div>
-</div>
-
 <script>
-function chivatoLog(txt) {
-  const el = document.getElementById('chivato-text');
-  if (el) { el.innerHTML += "<br>• " + txt; }
-}
-
-// 🌟 EJECUCIÓN INMEDIATA (No espera a nada)
-chivatoLog("1. Script de control iniciado.");
-
-window.onerror = function(m, s, l) { 
-  chivatoLog("<span style='color:#ef4444;'>❌ JS ERROR: " + m + " (Línea: " + l + ")</span>"); 
-  return false; 
-};
-
-window.onunhandledrejection = function(e) {
-  chivatoLog("<span style='color:#ef4444;'>❌ RED ERROR: " + (e.reason ? (e.reason.message || e.reason) : e) + "</span>");
-};
+function chivatoLog(txt) {} // Silenciado en producción
 </script>
 
  <div id="splash-loader">
