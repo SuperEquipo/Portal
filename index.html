@@ -1312,13 +1312,23 @@ function chivatoLog(txt) {} // Silenciado en producción
    let metricaActual = 'peso';
    let metricaNombreActual = 'Peso (kg)';
    let metricaUnidadActual = 'kg';
+   let rangoTiempoActual = '3M';
 
    function inicializarGraficoSeguimiento() {
-     const datosHistoricos = datosApp.historicoMetricas || [];
+     let datosHistoricos = datosApp.historicoMetricas || [];
      const elContenedor = document.querySelector("#chart-evolucion");
      if (!datosHistoricos || datosHistoricos.length === 0) {
        elContenedor.innerHTML = "<p style='text-align:center; padding: 40px 10px; color: var(--text-muted); font-size:13px;'>Sincroniza tu báscula para ver tus gráficas de evolución.</p>";
        return;
+     }
+
+     // 📅 FILTRO POR RANGO DE TIEMPO
+     if (rangoTiempoActual === '1M') {
+       datosHistoricos = datosHistoricos.slice(-4);  // Últimas 4 semanas (1 mes)
+     } else if (rangoTiempoActual === '3M') {
+       datosHistoricos = datosHistoricos.slice(-12); // Últimas 12 semanas (3 meses)
+     } else if (rangoTiempoActual === '1Y') {
+       datosHistoricos = datosHistoricos.slice(-52); // Último año
      }
 
      const seriesData = []; const fechasData = [];
@@ -1370,6 +1380,7 @@ function chivatoLog(txt) {} // Silenciado en producción
    }
 
    function filtrarRangoTiempo(rango, btn) {
+     rangoTiempoActual = rango;
      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('activo'));
      btn.classList.add('activo');
      inicializarGraficoSeguimiento();
