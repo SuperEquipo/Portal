@@ -1366,11 +1366,20 @@ function chivatoLog(txt) {} // Silenciado en producción
          mensaje: mensaje, nombre: datosApp.nombre, objetivo: datosApp.objetivo,
          nivel: datosApp.nivel, genero: datosApp.genero
        });
-       bodyChat.innerHTML += `<div class="burbuja ai">${res.respuesta}</div>`;
+       
+       // 📍 Creamos la burbuja y la enfocamos directamente en su encabezado
+       const burbujaAi = document.createElement('div');
+       burbujaAi.className = 'burbuja ai';
+       burbujaAi.innerHTML = res.respuesta;
+       bodyChat.appendChild(burbujaAi);
+       
+       // 👁️ Auto-scroll al inicio exacto de la respuesta
+       burbujaAi.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
      } catch (err) {
        bodyChat.innerHTML += `<div class="burbuja ai" style="color: #ef4444;">Fallo de conexión.</div>`;
+       bodyChat.scrollTop = bodyChat.scrollHeight;
      }
-     bodyChat.scrollTop = bodyChat.scrollHeight;
    }
 
    function mostrarAlertaCustom(msg) {
