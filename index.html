@@ -839,13 +839,13 @@ function chivatoLog(txt) {} // Silenciado en producción
          if (linea.includes("---")) {
            htmlFinal += "<hr style='border: none; border-top: 1px solid var(--border); margin: 24px 0;'>";
          } else if (linea.includes("ESTUDIO BIOMÉTRICO") || linea.includes("INFORME DE EVOLUCIÓN") || linea.startsWith("EVALUACIÓN INICIAL PARA:")) {
-           htmlFinal += "<div style='background: linear-gradient(135deg, #64748b, #475569); padding: 18px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); color: white;'>";
+           htmlFinal += "<div style='background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 20px; border-radius: 16px; margin-bottom: 22px; box-shadow: 0 8px 16px -2px rgba(15, 23, 42, 0.15); border: 1px solid rgba(255,255,255,0.08); color: white;'>";
            var icono = linea.includes("INFORME") ? "📈" : "📋";
            var textoLimpioTitulo = linea.replace(/📈|📋/g, "").trim();
            htmlFinal += "<h3 style='font-size: 15.5px; font-weight: 800; margin: 0; text-transform: uppercase; display: flex; align-items: center; gap: 8px; line-height: 1.4;'><span style='font-size:18px;'>" + icono + "</span> " + textoLimpioTitulo + "</h3>";
            dentroDeCajaTitulo = true;
          } else if (linea.includes("Análisis de punto de partida:") || linea.includes("Análisis comparativo:")) {
-           htmlFinal += "<div style='margin-top: 8px; color: #e2e8f0; font-size: 13px; font-style: italic; line-height: 1.4;'>" + linea + "</div>";
+          htmlFinal += "<div style='margin-top: 8px; color: #94a3b8; font-size: 12.5px; font-weight: 500; font-style: normal; letter-spacing: 0.2px; line-height: 1.4;'>" + linea + "</div>";
            if (dentroDeCajaTitulo) { htmlFinal += "</div>"; dentroDeCajaTitulo = false; }
          } else if (linea.startsWith("Esperando a que el cliente")) {
             htmlFinal += "<p style='text-align: center; color: var(--text-muted); font-style: italic;'>" + linea + "</p>";
