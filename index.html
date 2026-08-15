@@ -169,9 +169,42 @@
      height: 150px;
      background-color: var(--card-bg);
    }
-   .nav-item { background: none; border: none; font-size: 10px; font-weight: 600; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 4px; width: 25%; cursor: pointer; }
-   .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-   .nav-item.activo { color: var(--primary); }
+ .nav-item { 
+     background: none; 
+     border: none; 
+     font-size: 10px; 
+     font-weight: 600; 
+     color: var(--text-muted); 
+     display: flex; 
+     flex-direction: column; 
+     align-items: center; 
+     gap: 3px; 
+     width: 25%; 
+     cursor: pointer; 
+     transition: all 0.2s ease;
+   }
+   .nav-item svg { 
+     width: 22px; 
+     height: 22px; 
+     stroke: currentColor; 
+     fill: none; 
+     stroke-width: 2; 
+     stroke-linecap: round; 
+     stroke-linejoin: round; 
+     padding: 2px 12px;
+     border-radius: 14px;
+     transition: all 0.2s ease;
+   }
+   /* 🌟 Resalte activo: color azul eléctrico y fondo de cápsula suave */
+   .nav-item.activo { 
+     color: #2563eb; 
+     font-weight: 800; 
+   }
+   .nav-item.activo svg { 
+     background-color: #eff6ff; 
+     stroke: #2563eb;
+     stroke-width: 2.5; 
+   }
 
    .modal-overlay { position: fixed; inset: 0; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 24px; }
    .modal-box { background-color: white; border-radius: 20px; padding: 28px; width: 100%; max-width: 320px; text-align: center; }
