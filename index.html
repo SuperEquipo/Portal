@@ -669,7 +669,7 @@ function chivatoLog(txt) {} // Silenciado en producción
        try {
          const datosFrescos = await apiCall("obtenerDatos");
          if (datosFrescos && datosFrescos.nombre && datosFrescos.nombre !== "Presentación") {
-           const tieneInforme = Boolean(datosFrescos.informe && datosFrescos.informe.length > 60 && !datosFrescos.informe.includes("Esperando a que"));
+           const tieneInforme = Boolean(datosFrescos.informe && datosFrescos.informe.length > 60 && !datosFrescos.informe.includes("Esperando a que") && !datosFrescos.informe.includes("diseñando"));
            const planListo = (datosFrescos.ejercicios && datosFrescos.ejercicios.length > 1) || tieneInforme || Boolean(datosFrescos.presentacionUrl);
 
            // Si estaba diseñando el plan y acaba de terminar, muestra pantalla azul de carga
