@@ -541,47 +541,46 @@ function chivatoLog(txt) {} // Silenciado en producción
      window.location.reload();
    }
 
-   function inicializarInterfaz() {
-    // 📌 BUSCA DENTRO DE inicializarInterfaz():
-document.getElementById('nombre-usuario').innerText = "Hola, " + datosApp.nombre.split(" ")[0];
+   let temporizadorAutoSondeo = null;
+   let estabaDiseñandoPlan = false;
 
-// 📌 AÑADE ESTAS 3 LÍNEAS JUSTO DEBAJO:
-chivatoLog("Cliente cargado: " + datosApp.nombre);
-chivatoLog("Logo URL recibido: " + (datosApp.logoBase64 || "NINGUNO"));
-chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
+   function inicializarInterfaz() {
+     document.getElementById('nombre-usuario').innerText = "Hola, " + datosApp.nombre.split(" ")[0];
+
      if (datosApp.logoBase64) {
        const imgLogo = document.getElementById('header-logo-img');
        imgLogo.src = datosApp.logoBase64.startsWith("http") ? datosApp.logoBase64 : ("data:image/png;base64," + datosApp.logoBase64);
-      imgLogo.style.display = 'inline-block';
+       imgLogo.style.display = 'inline-block';
      }
 
-   const tarjetaInforme = document.getElementById('tarjeta-informe');
+     const tarjetaInforme = document.getElementById('tarjeta-informe');
      document.getElementById('contenido-informe').innerHTML = formatearInformeHTML(datosApp.informe);
 
-     // Comprobación inteligente: El plan está listo si hay ejercicios, si hay informe generado o si hay presentación
-     const tieneInformeListo = Boolean(datosApp.informe && datosApp.informe.length > 100 && !datosApp.informe.includes("Esperando a que"));
-   // El plan está listo si hay informe con contenido real o si hay presentación o ejercicios
      const tieneInformeReal = Boolean(datosApp.informe && datosApp.informe.length > 60 && !datosApp.informe.includes("Esperando a que"));
      const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInformeReal || Boolean(datosApp.presentacionUrl);
 
      if (tienePlanGenerado) {
-       // 1. PLAN LISTO: Muestra Evaluación, Presentación y oculta avisos
+       // 3. PLAN LISTO: Detiene la espera, oculta avisos y muestra el informe
+       if (temporizadorAutoSondeo) { clearInterval(temporizadorAutoSondeo); temporizadorAutoSondeo = null; }
        document.getElementById('caja-formulario').classList.add('hidden');
        document.getElementById('caja-procesando').classList.add('hidden');
        if (tarjetaInforme) tarjetaInforme.classList.remove('hidden');
 
      } else if (datosApp.respuestasEnviadas) {
-       // 2. FORMULARIO ENVIADO: Muestra "Diseñando tu plan..." mientras la IA trabaja
+       // 2. FORMULARIO ENVIADO: Muestra "Diseñando tu plan..." y vigila en segundo plano
+       estabaDiseñandoPlan = true;
        document.getElementById('caja-formulario').classList.add('hidden');
        document.getElementById('caja-procesando').classList.remove('hidden');
        if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
+       activarVigilanteAutoActualizacion();
 
      } else if (datosApp.formUrl) {
-       // 3. CLIENTE NUEVO: Muestra Cuestionario Pendiente
+       // 1. CLIENTE NUEVO: Muestra cuadro naranja de formulario pendiente
        document.getElementById('caja-formulario').classList.remove('hidden');
        document.getElementById('enlace-formulario').href = datosApp.formUrl;
        document.getElementById('caja-procesando').classList.add('hidden');
        if (tarjetaInforme) tarjetaInforme.classList.add('hidden');
+       activarVigilanteAutoActualizacion();
      }
 
      if (datosApp.presentacionUrl) {
@@ -603,6 +602,54 @@ chivatoLog("Avatar URL recibido: " + (datosApp.avatarBase64 || "NINGUNO"));
      renderizarRutina(tienePlanGenerado);
      renderizarDieta();
    }
+
+   function activarVigilanteAutoActualizacion() {
+     if (temporizadorAutoSondeo) return;
+     temporizadorAutoSondeo = setInterval(async function() {
+       try {
+         const datosFrescos = await apiCall("obtenerDatos");
+         if (datosFrescos && datosFrescos.nombre && datosFrescos.nombre !== "Presentación") {
+           const tieneInforme = Boolean(datosFrescos.informe && datosFrescos.informe.length > 60 && !datosFrescos.informe.includes("Esperando a que"));
+           const planListo = (datosFrescos.ejercicios && datosFrescos.ejercicios.length > 1) || tieneInforme || Boolean(datosFrescos.presentacionUrl);
+
+           // Si estaba diseñando el plan y acaba de terminar, muestra pantalla azul de carga
+           if (planListo && estabaDiseñandoPlan) {
+             const splash = document.getElementById('splash-loader');
+             if (splash) {
+               splash.style.display = 'flex';
+               splash.style.opacity = '1';
+               if (splash.querySelector('h2')) splash.querySelector('h2').innerText = "Cargando tu perfil...";
+             }
+             await new Promise(r => setTimeout(r, 1200));
+           }
+
+           datosApp = datosFrescos;
+           try { localStorage.setItem('superequipo_cache_datos_' + carpetaId, JSON.stringify(datosFrescos)); } catch(e){}
+           inicializarInterfaz();
+
+           if (planListo) {
+             const splash = document.getElementById('splash-loader');
+             if (splash) {
+               splash.style.opacity = '0';
+               setTimeout(() => splash.style.display = 'none', 300);
+             }
+           }
+         }
+       } catch(e) {}
+     }, 4000); // Comprueba cada 4 segundos
+   }
+
+   // Comprueba también en el segundo exacto que el cliente vuelve a la pestaña
+   document.addEventListener('visibilitychange', function() {
+     if (document.visibilityState === 'visible') {
+       apiCall("obtenerDatos").then(function(res) {
+         if (res && res.nombre) {
+           datosApp = res;
+           inicializarInterfaz();
+         }
+       }).catch(function(){});
+     }
+   });
 
    function abrirPresentacionModal() {
      const modal = document.getElementById('modal-presentacion');
