@@ -216,7 +216,7 @@ function chivatoLog(txt) {} // Silenciado en producción
      <div id="caja-formulario" class="banner-alerta hidden">
        <h3>📝 Cuestionario Pendiente</h3>
        <p>Completa tus datos iniciales para generar tu planificación.</p>
-       <a id="enlace-formulario" href="#" target="_blank" class="btn-amber">Rellenar ahora</a>
+      <a id="enlace-formulario" href="#" target="_blank" onclick="marcarFormularioEnviado()" class="btn-amber">Rellenar ahora</a>
      </div>
 
      <div id="caja-procesando" class="card hidden" style="text-align: center; border-color: var(--primary);">
@@ -541,8 +541,16 @@ function chivatoLog(txt) {} // Silenciado en producción
      window.location.reload();
    }
 
-   let temporizadorAutoSondeo = null;
+  let temporizadorAutoSondeo = null;
    let estabaDiseñandoPlan = false;
+
+   function marcarFormularioEnviado() {
+     sessionStorage.setItem('superequipo_form_enviado', 'true');
+     document.getElementById('caja-formulario').classList.add('hidden');
+     document.getElementById('caja-procesando').classList.remove('hidden');
+     estabaDiseñandoPlan = true;
+     activarVigilanteAutoActualizacion();
+   }
 
    function inicializarInterfaz() {
      document.getElementById('nombre-usuario').innerText = "Hola, " + datosApp.nombre.split(" ")[0];
@@ -556,17 +564,23 @@ function chivatoLog(txt) {} // Silenciado en producción
      const tarjetaInforme = document.getElementById('tarjeta-informe');
      document.getElementById('contenido-informe').innerHTML = formatearInformeHTML(datosApp.informe);
 
-     const tieneInformeReal = Boolean(datosApp.informe && datosApp.informe.length > 60 && !datosApp.informe.includes("Esperando a que"));
+     const tieneInformeReal = Boolean(datosApp.informe && datosApp.informe.length > 60 && !datosApp.informe.includes("Esperando a que") && !datosApp.informe.includes("diseñando tu plan"));
      const tienePlanGenerado = (datosApp.ejercicios && datosApp.ejercicios.length > 1) || tieneInformeReal || Boolean(datosApp.presentacionUrl);
 
+     const estaEnProcesoIA = Boolean(
+       datosApp.respuestasEnviadas || 
+       (datosApp.informe && datosApp.informe.includes("diseñando")) ||
+       sessionStorage.getItem('superequipo_form_enviado') === 'true'
+     );
+
      if (tienePlanGenerado) {
-       // 3. PLAN LISTO: Detiene la espera, oculta avisos y muestra el informe
+       sessionStorage.removeItem('superequipo_form_enviado');
        if (temporizadorAutoSondeo) { clearInterval(temporizadorAutoSondeo); temporizadorAutoSondeo = null; }
        document.getElementById('caja-formulario').classList.add('hidden');
        document.getElementById('caja-procesando').classList.add('hidden');
        if (tarjetaInforme) tarjetaInforme.classList.remove('hidden');
 
-     } else if (datosApp.respuestasEnviadas) {
+     } else if (estaEnProcesoIA) {
        // 2. FORMULARIO ENVIADO: Muestra "Diseñando tu plan..." y vigila en segundo plano
        estabaDiseñandoPlan = true;
        document.getElementById('caja-formulario').classList.add('hidden');
